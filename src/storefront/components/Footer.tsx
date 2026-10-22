@@ -119,8 +119,7 @@ export function Footer() {
           {t('copyrightNote', lang, { year })}
           {' · '}
           {lang === 'pt' ? 'Desenvolvido por ' : 'Built by '}
-          {/* The studio's landing page only exists in Portuguese (/en is a 404). */}
-          <a href="https://velship-labs-landing-page.vercel.app/pt" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+          <a href="https://www.velshiplabs.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
             Velship Labs
           </a>
         </div>

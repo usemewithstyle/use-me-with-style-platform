@@ -82,7 +82,7 @@ test('the footer credits Velship Labs with a link, in both markets', async ({ pa
     await seedCheckout(page, { market, lang: 'en' });
     await page.goto('/checkout');
     const credit = page.locator('footer').getByRole('link', { name: 'Velship Labs' });
-    await expect(credit).toHaveAttribute('href', 'https://velship-labs-landing-page.vercel.app/pt');
+    await expect(credit).toHaveAttribute('href', 'https://www.velshiplabs.com/');
     await expect(credit).toHaveAttribute('target', '_blank');
     await expect(credit).toHaveAttribute('rel', /noopener/);
   }

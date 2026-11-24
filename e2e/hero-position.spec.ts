@@ -58,3 +58,31 @@ test('admin positions save independently and the storefront uses the saved frami
   await expect(mobile.getByRole('slider').nth(1)).toHaveValue('0');
 
 });
+
+test('a missing mobile hero shows the brand image and a repaired upload is used on reload', async ({ page }) => {
+  const path = '/api/media/file/mobile.webp';
+  let missing = true;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/**', async route => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === '/api/globals/home-hero') {
+      return route.fulfill({ json: {
+        heroImage: { id: 84, url: '/api/media/file/desktop.webp' },
+        heroImageMobile: { id: 85, url: path },
+      } });
+    }
+    if (pathname === path) {
+      if (missing) return route.fulfill({ status: 404 });
+      return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"/>' });
+    }
+    return route.fulfill({ json: { docs: [] } });
+  });
+  await page.goto('/');
+  const hero = page.locator('.ump-hero-photo img');
+  await expect(hero).toHaveAttribute('data-media-fallback-for', path);
+  await expect.poll(() => hero.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  missing = false;
+  await page.reload();
+  await expect.poll(() => hero.evaluate(image => new URL((image as HTMLImageElement).currentSrc).pathname)).toBe(path);
+  await expect.poll(() => hero.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(32);
+});

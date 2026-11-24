@@ -260,6 +260,7 @@ async function createCaptureContext(browser) {
     // (and its descriptive alt) in crawler HTML. These same-origin URLs are
     // served by proxyApi() and cached above. Other decorative/social images
     // remain skipped to keep the 58-page production build lightweight.
+    if (pathname === '/brand/use-me-email-avatar.png') return route.continue()
     return pathname.startsWith('/api/media/file/') ? route.continue() : route.abort()
   })
   return context
@@ -269,8 +270,14 @@ async function captureRoute(context, port, market, route) {
   const config = MARKETS[market]
   const page = await context.newPage()
   const pageErrors = []
+  const missingImages = new Set()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   page.on('response', (response) => {
+    const { pathname } = new URL(response.url())
+    if (response.status() === 404 && response.request().resourceType() === 'image' && pathname.startsWith('/api/media/file/')) {
+      missingImages.add(pathname)
+      return
+    }
     if (response.status() >= 400) pageErrors.push(`response: ${response.status()} ${response.url()}`)
   })
   page.on('console', (message) => {
@@ -300,6 +307,15 @@ async function captureRoute(context, port, market, route) {
       await page.waitForFunction(() => document.querySelectorAll('a[href^="/produto/"]').length > 0, undefined, { timeout: 30_000 })
     }
 
+    if (missingImages.size) {
+      const replacements = await page.locator('img[data-media-fallback-for]').evaluateAll(images =>
+        images.filter(image => image.complete && image.naturalWidth > 0)
+          .map(image => image.dataset.mediaFallbackFor)
+      )
+      for (const missing of missingImages) {
+        if (!replacements.includes(missing)) pageErrors.push(`Missing image without a loaded fallback: ${missing}`)
+      }
+    }
     if (pageErrors.length > 0) throw new Error(`${market} ${route} browser errors:\n${pageErrors.join('\n')}`)
     await page.evaluate(({ marketName, stamp }) => {
       const root = document.getElementById('root')

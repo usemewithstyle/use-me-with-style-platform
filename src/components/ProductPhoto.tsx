@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { StorefrontImage } from './StorefrontImage';
 import { C } from '../theme';
 import type { ProductImage } from '../types/product';
 
@@ -44,7 +44,6 @@ export function ProductPhoto({
    * correctly lazy by default. */
   priority?: boolean;
 }) {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   // 'full' still exists for callers that genuinely want the original
   // (e.g. a future zoom/lightbox), but variant='card' is what ProductDetail's
   // hero now requests: at a fixed ~440px display height, a 3000x3000
@@ -81,9 +80,9 @@ export function ProductPhoto({
   // the audit's former alt="" failure mode.
   const imageAlt = image?.alt?.trim() || 'Produto — Use Me With Style';
 
-  if (imageUrl && failedUrl !== imageUrl) {
+  if (imageUrl) {
     return (
-      <img
+      <StorefrontImage
         data-artwork
         src={imageUrl}
         srcSet={srcSet || undefined}
@@ -94,7 +93,6 @@ export function ProductPhoto({
         loading={priority ? 'eager' : 'lazy'}
         fetchPriority={priority ? 'high' : undefined}
         decoding="async"
-        onError={() => setFailedUrl(imageUrl)}
         style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover', borderRadius: radius }}
       />
     );

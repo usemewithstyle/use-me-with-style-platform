@@ -7,6 +7,7 @@ import { useApp } from '../../state/AppContext';
 import { useProducts } from '../../hooks/useProducts';
 import { ProductCard } from '../components/ProductCard';
 import { ProductPhoto, type ProductTone } from '../../components/ProductPhoto';
+import { StorefrontImage } from '../../components/StorefrontImage';
 import { InstagramFeed } from '../components/InstagramFeed';
 import {
   fetchCategories,
@@ -489,21 +490,19 @@ export function Home() {
           <div className="ump-hero-photo" style={{ aspectRatio: '3 / 2', borderRadius: 10, overflow: 'hidden' }}>
             {heroImageUrl ? (
               <>
-                <picture>
-                  {heroImageMobileUrl && <source media="(max-width: 859px)" srcSet={heroImageMobileSrcSet || heroImageMobileUrl} sizes="100vw" />}
-                  <img
-                    src={heroImageUrl}
-                    srcSet={heroImageSrcSet || undefined}
-                    sizes="(min-width: 1024px) 100vw, (min-width: 860px) 58vw, 100vw"
-                    alt={heroImage?.alt?.trim() || (lang === 'pt' ? 'Coleção Use Me With Style' : 'Use Me With Style collection')}
-                    width={1600}
-                    height={1067}
-                    loading="eager"
-                    fetchPriority="high"
-                    decoding="async"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
-                </picture>
+                <StorefrontImage
+                  sources={heroImageMobileUrl && <source media="(max-width: 859px)" srcSet={heroImageMobileSrcSet || heroImageMobileUrl} sizes="100vw" />}
+                  src={heroImageUrl}
+                  srcSet={heroImageSrcSet || undefined}
+                  sizes="(min-width: 1024px) 100vw, (min-width: 860px) 58vw, 100vw"
+                  alt={heroImage?.alt?.trim() || (lang === 'pt' ? 'Coleção Use Me With Style' : 'Use Me With Style collection')}
+                  width={1600}
+                  height={1067}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
                 <div className="ump-hero-shade" aria-hidden="true" />
               </>
             ) : (
@@ -585,7 +584,7 @@ export function Home() {
                 }}
               >
                 {imageUrl ? (
-                  <img
+                  <StorefrontImage
                     src={imageUrl}
                     srcSet={imageSrcSet || undefined}
                     sizes="(max-width: 640px) 70vw, 280px"

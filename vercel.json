@@ -22,27 +22,27 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://use-me-with-style-cms-production.up.railway.app/api/:path*"
+      "destination": "https://use-me-with-style-cms-production-cb93153d.up.railway.app/api/:path*"
     },
     {
       "source": "/robots.txt",
       "has": [{ "type": "host", "value": "ao.usemewithstyle.shop" }],
-      "destination": "https://use-me-with-style-cms-production.up.railway.app/api/robots.txt?market=AO"
+      "destination": "https://use-me-with-style-cms-production-cb93153d.up.railway.app/api/robots.txt?market=AO"
     },
     {
       "source": "/sitemap.xml",
       "has": [{ "type": "host", "value": "ao.usemewithstyle.shop" }],
-      "destination": "https://use-me-with-style-cms-production.up.railway.app/api/sitemap.xml?market=AO"
+      "destination": "https://use-me-with-style-cms-production-cb93153d.up.railway.app/api/sitemap.xml?market=AO"
     },
     {
       "source": "/robots.txt",
       "has": [{ "type": "host", "value": "pt.usemewithstyle.shop" }],
-      "destination": "https://use-me-with-style-cms-production.up.railway.app/api/robots.txt?market=PT"
+      "destination": "https://use-me-with-style-cms-production-cb93153d.up.railway.app/api/robots.txt?market=PT"
     },
     {
       "source": "/sitemap.xml",
       "has": [{ "type": "host", "value": "pt.usemewithstyle.shop" }],
-      "destination": "https://use-me-with-style-cms-production.up.railway.app/api/sitemap.xml?market=PT"
+      "destination": "https://use-me-with-style-cms-production-cb93153d.up.railway.app/api/sitemap.xml?market=PT"
     },
     {
       "source": "/",

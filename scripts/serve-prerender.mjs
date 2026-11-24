@@ -6,7 +6,7 @@ import { isPublicRouteShape, isRuntimeSpaRoute, outputFileForRoute } from './pre
 
 const projectDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const distDir = path.join(projectDir, 'dist')
-const cmsOrigin = (process.env.PRERENDER_CMS_ORIGIN || 'https://use-me-with-style-cms-production.up.railway.app').replace(/\/$/, '')
+const cmsOrigin = (process.env.PRERENDER_CMS_ORIGIN || 'https://use-me-with-style-cms-production-cb93153d.up.railway.app').replace(/\/$/, '')
 const port = Number(process.env.PORT) || 4173
 
 const contentTypes = {

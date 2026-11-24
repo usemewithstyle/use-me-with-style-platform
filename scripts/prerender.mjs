@@ -15,7 +15,7 @@ import {
 
 const projectDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const distDir = path.join(projectDir, 'dist')
-const cmsOrigin = (process.env.PRERENDER_CMS_ORIGIN || 'https://use-me-with-style-cms-production.up.railway.app').replace(/\/$/, '')
+const cmsOrigin = (process.env.PRERENDER_CMS_ORIGIN || 'https://use-me-with-style-cms-production-cb93153d.up.railway.app').replace(/\/$/, '')
 const generatedAt = new Date().toISOString()
 const responseCache = new Map()
 const useServerlessChromium = process.env.VERCEL === '1' && process.platform === 'linux'

@@ -23,7 +23,6 @@ export function AnnouncementBar() {
 
   useEffect(() => {
     let live = true;
-    setFresh(false);
     fetchAnnouncementBar(market)
       .then((result) => {
         rememberAnnouncementForPrerender(market, result);

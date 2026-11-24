@@ -38,7 +38,7 @@ const STATIC_BREADCRUMB_LABELS: Record<string, { pt: string; en: string }> = {
 };
 
 export function StorefrontLayout() {
-  const { lang, setLang, themeMode, setThemeMode, cart } = useApp();
+  const { lang, setLang, themeMode, setThemeMode, cart, market } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
@@ -150,7 +150,7 @@ export function StorefrontLayout() {
           { name: staticBreadcrumbLabel, path: location.pathname },
         ]} />
       ) : null}
-      <AnnouncementBar />
+      <AnnouncementBar key={market} />
       <div
         ref={headerRef}
         style={{

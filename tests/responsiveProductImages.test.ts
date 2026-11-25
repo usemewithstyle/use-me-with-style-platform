@@ -19,8 +19,8 @@ test('product photography exposes generated responsive sources to the browser', 
   assert.match(photo, /srcSet=\{srcSet \|\| undefined\}/);
   assert.match(photo, /image\?\.mediumUrl, 960/);
   assert.match(photo, /image\?\.largeUrl, 1600/);
-  assert.match(adapter, /mediumUrl: absoluteMediaUrl/);
-  assert.match(adapter, /largeUrl: absoluteMediaUrl/);
+  assert.match(adapter, /mediumUrl: uploadUrl/);
+  assert.match(adapter, /largeUrl: uploadUrl/);
 });
 
 test('product images reserve intrinsic space and colour swatches avoid originals', () => {

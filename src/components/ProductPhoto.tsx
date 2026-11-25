@@ -84,6 +84,8 @@ export function ProductPhoto({
     return (
       <StorefrontImage
         data-artwork
+        key={imageUrl}
+        originalSrc={image?.url}
         src={imageUrl}
         srcSet={srcSet || undefined}
         sizes={srcSet ? responsiveSizes : undefined}

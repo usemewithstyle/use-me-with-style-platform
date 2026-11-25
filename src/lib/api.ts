@@ -62,6 +62,7 @@ export type ApiProductImageRef =
       id?: string | number;
       url?: string;
       alt?: string;
+      updatedAt?: string;
       sizes?: ApiMedia['sizes'];
     };
 

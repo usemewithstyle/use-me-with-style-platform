@@ -1,9 +1,10 @@
 import { useState, type ImgHTMLAttributes, type ReactNode } from 'react';
 
-type Props = ImgHTMLAttributes<HTMLImageElement> & { sources?: ReactNode };
+type Props = ImgHTMLAttributes<HTMLImageElement> & { sources?: ReactNode; originalSrc?: string };
 
-export function StorefrontImage({ sources, ...props }: Props) {
+export function StorefrontImage({ sources, originalSrc, ...props }: Props) {
   const [failure, setFailure] = useState<{ src: string | undefined; path: string } | null>(null);
+  const [retrySrc, setRetrySrc] = useState<string>();
   if (failure && failure.src === props.src) {
     return (
       <img
@@ -21,9 +22,15 @@ export function StorefrontImage({ sources, ...props }: Props) {
   const image = (
     <img
       {...props}
-      onError={({ currentTarget }) =>
-        setFailure({ src: props.src, path: new URL(currentTarget.currentSrc || currentTarget.src).pathname })
-      }
+      src={retrySrc ?? props.src}
+      srcSet={retrySrc ? undefined : props.srcSet}
+      onError={({ currentTarget }) => {
+        if (originalSrc && !retrySrc && currentTarget.currentSrc !== originalSrc) {
+          setRetrySrc(originalSrc);
+          return;
+        }
+        setFailure({ src: props.src, path: new URL(currentTarget.currentSrc || currentTarget.src).pathname });
+      }}
     />
   );
   return sources ? <picture>{sources}{image}</picture> : image;

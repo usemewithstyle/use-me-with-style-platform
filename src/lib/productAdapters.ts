@@ -88,17 +88,26 @@ export function adaptApiProduct(api: ApiProduct, market: 'AO' | 'PT', lang: 'pt'
   const imageProductType = verifiedProductType(api.id, lang, categoryLabel);
   const images = (api.images ?? []).flatMap(({ image, color }) => {
     if (!image || typeof image !== 'object') return [];
-    const url = absoluteMediaUrl(image.url);
+    // Uploads can reuse a filename, while the storefront caches that path for a year.
+    const uploadUrl = (path?: string) => {
+      const resolved = absoluteMediaUrl(path);
+      if (!resolved || !image.updatedAt) return resolved;
+      const url = new URL(resolved);
+      if (!url.pathname.startsWith('/api/media/file/')) return resolved;
+      url.searchParams.set('v', image.id + '-' + image.updatedAt);
+      return url.href;
+    };
+    const url = uploadUrl(image.url);
     if (!url) return [];
     const colorDoc = resolveRef(color);
     const imageColor = (lang === 'en' ? colorDoc?.nameEN : colorDoc?.namePT)?.trim() || colorDoc?.namePT || '';
     return [{
       url,
-      cardUrl: absoluteMediaUrl(image.sizes?.card?.url),
-      thumbnailUrl: absoluteMediaUrl(image.sizes?.thumbnail?.url),
-      smallUrl: absoluteMediaUrl(image.sizes?.small?.url),
-      mediumUrl: absoluteMediaUrl(image.sizes?.medium?.url),
-      largeUrl: absoluteMediaUrl(image.sizes?.large?.url),
+      cardUrl: uploadUrl(image.sizes?.card?.url),
+      thumbnailUrl: uploadUrl(image.sizes?.thumbnail?.url),
+      smallUrl: uploadUrl(image.sizes?.small?.url),
+      mediumUrl: uploadUrl(image.sizes?.medium?.url),
+      largeUrl: uploadUrl(image.sizes?.large?.url),
       alt: usableProductImageAlt(image.alt, { productName: localizedName, colorName: imageColor, productType: imageProductType }),
       colorId: refId(color) || undefined,
     }];

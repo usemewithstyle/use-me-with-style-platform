@@ -307,7 +307,8 @@ async function captureRoute(context, port, market, route) {
       }, undefined, { timeout: 30_000 })
     }
     if (route === '/catalogo') {
-      await page.waitForFunction(() => document.querySelectorAll('a[href^="/produto/"]').length > 0, undefined, { timeout: 30_000 })
+      const hasProducts = discovered[market].some(path => path.startsWith('/produto/'))
+      await page.locator(hasProducts ? 'a[href^="/produto/"]' : '[data-empty-catalog]').first().waitFor({ state: 'attached', timeout: 30_000 })
     }
 
     if (missingImages.size) {

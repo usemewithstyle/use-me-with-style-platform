@@ -41,7 +41,8 @@ for (const [market, config] of Object.entries(MARKETS)) {
   const entries = manifest.markets?.[market] ?? []
   const routes = new Set(entries.map((entry) => entry.route))
   for (const route of STATIC_PRERENDER_ROUTES) expect(routes.has(route), `${market} is missing static route ${route}`)
-  if (process.env.PRERENDER_ALLOW_EMPTY_CATALOG !== 'true') expect(entries.some((entry) => entry.route.startsWith('/produto/')), `${market} has no product pages`)
+  const hasProducts = entries.some(entry => entry.route.startsWith('/produto/'))
+  if (process.env.PRERENDER_ALLOW_EMPTY_CATALOG !== 'true') expect(hasProducts, `${market} has no product pages`)
 
   for (const entry of entries) {
     const label = `${market} ${entry.route}`
@@ -82,7 +83,8 @@ for (const [market, config] of Object.entries(MARKETS)) {
       }
     }
     if (entry.route === '/catalogo') {
-      expect(/href="\/produto\//.test(html), `${label} contains no crawlable product links`)
+      if (hasProducts) expect(/href="\/produto\//.test(html), `${label} contains no crawlable product links`)
+      else expect(html.includes('data-empty-catalog'), `${label} lacks the empty catalog message`)
     }
     if (entry.route === '/perguntas-frequentes') {
       const faq = blocks.find((block) => block['@type'] === 'FAQPage')

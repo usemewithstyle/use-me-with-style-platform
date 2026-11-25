@@ -387,8 +387,8 @@ export const T: Record<string, Record<Lang, string>> = {
   // CTA vanished entirely once an order reached 'processing', with nothing
   // to replace it -- "no button, no nothing"). Order matches STATUSES.
   shipWithoutTrackingConfirm: {
-    en: "There is no Zygo tracking number on this order yet. Mark it as shipped anyway? The customer gets the shipped email now and a second, short email when you add the number later.\n\nTo send one email with the number, press Cancel, enter the number and click \"Mark as shipped\" again.",
-    pt: 'Esta encomenda ainda não tem número de rastreio da Zygo. Marcar como enviada mesmo assim? O cliente recebe já o email de envio e um segundo email curto quando adicionar o número.\n\nPara enviar um só email com o número, carregue em Cancelar, escreva o número e clique de novo em "Marcar como enviada".',
+    en: "There is no local courier reference on this order yet. Mark it as shipped anyway? The customer gets the shipped email now and a second, short email when you add the number later.\n\nTo send one email with the number, press Cancel, enter the number and click \"Mark as shipped\" again.",
+    pt: 'Esta encomenda ainda não tem referência do estafeta local. Marcar como enviada mesmo assim? O cliente recebe já o email de envio e um segundo email curto quando adicionar o número.\n\nPara enviar um só email com o número, carregue em Cancelar, escreva o número e clique de novo em "Marcar como enviada".',
   },
   markAsShipped: { en: 'Mark as shipped', pt: 'Marcar como enviada' },
   markAsDelivered: { en: 'Mark as delivered', pt: 'Marcar como entregue' },
@@ -423,7 +423,7 @@ export const T: Record<string, Record<Lang, string>> = {
   paymentMethodManualWhatsapp: { en: 'Manual coordination (WhatsApp)', pt: 'Coordenação manual (WhatsApp)' },
   deliveryMethodCtt: { en: 'CTT Standard (untracked)', pt: 'CTT Standard (sem rastreio)' },
   deliveryMethodCourierPt: { en: 'CTT Registered (tracked)', pt: 'CTT Registado (com rastreio)' },
-  deliveryMethodCourierAo: { en: 'Zygo', pt: 'Zygo' },
+  deliveryMethodCourierAo: { en: 'Local courier', pt: 'Estafeta local' },
   orderDetailSubtitle: {
     en: 'Manual payment confirmation before processing and manual Angola coordination.',
     pt: 'Confirmação manual do pagamento antes do processamento e coordenação manual em Angola.',
@@ -716,7 +716,7 @@ export const T: Record<string, Record<Lang, string>> = {
   freeShippingThreshold: { en: 'Free from (€)', pt: 'Grátis a partir de (€)' },
   municipalityPrices: { en: 'Municipality prices', pt: 'Preços por município' },
   editMunicipalityPrices: { en: 'Edit 16 municipality prices', pt: 'Editar preços dos 16 municípios' },
-  zonePrices: { en: 'Zygo delivery prices', pt: 'Preços de entrega Zygo' },
+  zonePrices: { en: 'Local courier delivery prices', pt: 'Preços de entrega por estafeta local' },
   editZonePrices: { en: 'Edit the 4 zone prices', pt: 'Editar os preços das 4 zonas' },
   zonePricesHint: { en: 'Per zone, plus the free-delivery threshold', pt: 'Por zona, mais o limite de entrega gratuita' },
   zoneCentro: { en: 'Centro — Ingombotas, Maianga, Alvalade, Maculusso, Mutamba, Cassenda', pt: 'Centro — Ingombotas, Maianga, Alvalade, Maculusso, Mutamba, Cassenda' },
@@ -727,7 +727,7 @@ export const T: Record<string, Record<Lang, string>> = {
   freeShippingEnabledLabel: { en: 'Offer free delivery above a minimum order', pt: 'Oferecer entrega grátis acima de um valor mínimo' },
   freeShippingThresholdKz: { en: 'Free from (Kz)', pt: 'Grátis a partir de (Kz)' },
   deliveryRegionLabel: { en: 'Delivery region', pt: 'Região de entrega' },
-  zygoTrackingCodeLabel: { en: 'Zygo tracking number (emailed to the customer)', pt: 'Número de rastreio Zygo (enviado ao cliente por email)' },
+  courierReferenceLabel: { en: 'local courier reference (emailed to the customer)', pt: 'Referência do estafeta local (enviado ao cliente por email)' },
   cttTrackingCodeLabel: { en: 'CTT tracking code', pt: 'Código de rastreio CTT' },
   orderFlowLabel: { en: 'Order flow', pt: 'Fluxo da encomenda' },
   angolaOrderFlow: { en: 'New to Payment Review to Processing.', pt: 'Nova → Revisão de pagamento → Em processamento.' },

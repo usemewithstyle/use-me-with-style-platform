@@ -42,7 +42,7 @@ test('Portugal parcels over 2 kg use tracked mainland/island rates while free de
   assert.equal(checkoutShippingCost('PT', 'courier_pt', 75, FREE_ON, undefined, 2500, '9500-001'), 0);
 });
 
-test('Angola Zygo pricing is by zone, editable per zone, and free from Kz 80,000', () => {
+test('Angola courier pricing is by zone, editable per zone, and free from Kz 80,000', () => {
   assert.equal(checkoutShippingCost('AO', 'courier_ao', 79_999, FREE_ON, 'Mutamba'), 3500); // Centro
   assert.equal(checkoutShippingCost('AO', 'courier_ao', 79_999, FREE_ON, 'Talatona'), 3500); // Sul
   assert.equal(checkoutShippingCost('AO', 'courier_ao', 79_999, FREE_ON, 'Hoji ya Henda'), 3500); // Norte

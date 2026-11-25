@@ -74,6 +74,7 @@ async function discoverCatalogueRoutes(market) {
   const availability = market === 'AO' ? 'availableAO' : 'availablePT'
   const routes = []
   const categoryIds = new Set()
+  let confirmedEmpty = false
   let page = 1
   let totalPages = 1
   do {
@@ -84,7 +85,9 @@ async function discoverCatalogueRoutes(market) {
     url.searchParams.set('page', String(page))
     url.searchParams.set('depth', '0')
     const data = await fetchJson(url)
-    for (const product of data.docs ?? []) {
+    if (!Array.isArray(data.docs)) throw new Error('Invalid CMS product response')
+    if (page === 1) confirmedEmpty = data.totalDocs === 0 && data.docs.length === 0
+    for (const product of data.docs) {
       if (typeof product.slug === 'string' && product.slug.trim()) {
         routes.push(`/produto/${encodeURIComponent(product.slug.trim())}`)
       }
@@ -95,7 +98,7 @@ async function discoverCatalogueRoutes(market) {
     page += 1
   } while (page <= totalPages)
 
-  if (routes.length === 0) throw new Error(`CMS returned no active ${market} product routes; refusing to publish an empty prerender.`)
+  if (routes.length === 0 && !(confirmedEmpty && process.env.PRERENDER_ALLOW_EMPTY_CATALOG === 'true')) throw new Error(`CMS returned no active ${market} product routes; refusing to publish an empty prerender.`)
   const categories = []
   page = 1
   totalPages = 1

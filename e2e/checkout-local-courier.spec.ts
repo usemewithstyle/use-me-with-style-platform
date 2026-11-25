@@ -2,27 +2,22 @@ import { test, expect } from '@playwright/test';
 import { t } from '../src/theme';
 import { mockCheckoutBackend, seedCheckout } from './helpers/mockCheckout';
 
-/** Angola delivery by Zygo: four priced zones, an optional point of reference, a link to Zygo. */
+/** Angola delivery by local courier: four priced zones, an optional point of reference. */
 
 function digitsOnly(text: string): string {
   return text.replace(/[^\d]/g, '');
 }
 
-test.describe('Angola checkout: Zygo delivery', () => {
+test.describe('Angola checkout: local courier delivery', () => {
   test.beforeEach(async ({ page }) => {
     await mockCheckoutBackend(page);
     await seedCheckout(page, { market: 'AO', lang: 'en' });
     await page.goto('/checkout');
   });
 
-  test('the delivery method names Zygo and links to its website', async ({ page }) => {
-    const link = page.getByRole('link', { name: 'Zygo' }).first();
-    await expect(link).toHaveAttribute('href', 'https://www.zygo.ao/');
-    await expect(link).toHaveAttribute('target', '_blank');
-    await expect(link).toHaveAttribute('rel', /noopener/);
-    // clicking the link must not be what selects the delivery method row
-    await expect(page.locator('input[name="delivery"][value="courier_ao"]')).toBeChecked();
-    await expect(page.getByText(/Estafeta|Local courier/i)).toHaveCount(0);
+  test('the delivery method shows the local courier', async ({ page }) => {
+    await expect(page.getByRole('radio', { name: 'Local courier' })).toBeChecked();
+    await expect(page.locator('a[href*="zygo.ao"]')).toHaveCount(0);
   });
 
   test('neighbourhoods are grouped by zone with the zone price, and the price follows the choice', async ({ page }) => {

@@ -438,7 +438,7 @@ export function OrderDetail() {
               </select>
             </label>
             <EditField label={t('deliveryRegionLabel', lang)} value={order.deliveryRegion ?? ''} onChange={() => {}} disabled />
-            <EditField label={t(order.market === 'AO' ? 'zygoTrackingCodeLabel' : 'cttTrackingCodeLabel', lang)} value={form.cttTrackingCode} onChange={(v) => setField('cttTrackingCode', v.toUpperCase().replace(/\s/g, ''))} />
+            <EditField label={t(order.market === 'AO' ? 'courierReferenceLabel' : 'cttTrackingCodeLabel', lang)} value={form.cttTrackingCode} onChange={(v) => setField('cttTrackingCode', v.toUpperCase().replace(/\s/g, ''))} />
             <label style={{ display: 'block', gridColumn: 'span 3' }}>
               <div style={{ fontSize: 9, fontWeight: 800, color: C.goldDeep, marginBottom: 6 }}>{t('notesLabel', lang)}</div>
               <textarea

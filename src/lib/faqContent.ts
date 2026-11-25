@@ -71,8 +71,8 @@ export function buildFaqEntries(market: Market, lang: Lang, settings: MarketSett
 
   const shipping = market === 'AO'
     ? (lang === 'pt'
-      ? 'Entregamos em Luanda através da Zygo (zygo.ao), em 21 bairros organizados em 4 zonas. O custo depende da zona e é apresentado no checkout; depois da confirmação, a equipa coordena consigo o horário de entrega. Não prometemos um prazo de 24 horas sem confirmação prévia.'
-      : 'We deliver in Luanda through Zygo (zygo.ao), across 21 neighbourhoods grouped in 4 zones. The fee depends on the zone and is shown at checkout; after confirmation, our team coordinates the delivery time with you. We do not promise 24-hour delivery without prior confirmation.')
+      ? 'Entregamos em Luanda por estafeta local, em 21 bairros organizados em 4 zonas. O custo depende da zona e é apresentado no checkout; depois da confirmação, a equipa coordena consigo o horário de entrega. Não prometemos um prazo de 24 horas sem confirmação prévia.'
+      : 'We deliver in Luanda by local courier, across 21 neighbourhoods grouped in 4 zones. The fee depends on the zone and is shown at checkout; after confirmation, our team coordinates the delivery time with you. We do not promise 24-hour delivery without prior confirmation.')
     : (lang === 'pt'
       ? 'Em Portugal enviamos pelos CTT. Pode escolher envio Standard sem rastreio ou Registado com rastreio, quando disponível para o peso da encomenda. O custo e o prazo estimado dependem do destino; Madeira e Açores podem demorar mais.'
       : 'In Portugal we ship with CTT. You can choose Standard untracked or Registered tracked delivery when available for the parcel weight. Cost and estimated timing depend on the destination; Madeira and the Azores may take longer.');
@@ -116,8 +116,8 @@ export function buildFaqEntries(market: Market, lang: Lang, settings: MarketSett
     {
       question: lang === 'pt' ? 'Como acompanho a minha encomenda?' : 'How do I track my order?',
       answer: lang === 'pt'
-        ? 'Use o número da encomenda e o email utilizado na compra na página Consultar encomenda. Em Portugal, o código e o link de rastreio CTT aparecem depois de a encomenda ser enviada, quando o serviço escolhido inclui rastreio. Em Angola, enviamos-lhe por email o número de rastreio da Zygo, que pode consultar em zygo.ao/rastreio.'
-        : 'Use your order number and the email used at checkout on the Track order page. In Portugal, the CTT tracking code and link appear after dispatch when your selected service includes tracking. In Angola, we email you the Zygo tracking number, which you can follow at zygo.ao/rastreio.',
+        ? 'Use o número da encomenda e o email utilizado na compra na página Consultar encomenda. Em Portugal, o código e o link de rastreio CTT aparecem depois de a encomenda ser enviada, quando o serviço escolhido inclui rastreio. Em Angola, a equipa coordena a entrega consigo.'
+        : 'Use your order number and the email used at checkout on the Track order page. In Portugal, the CTT tracking code and link appear after dispatch when your selected service includes tracking. In Angola, our team coordinates delivery with you.',
       link: { to: '/conta', label: lang === 'pt' ? 'Consultar encomenda' : 'Track order' },
     },
   ];

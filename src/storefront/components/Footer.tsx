@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { ZygoLink } from './ZygoLink';
 import { AppyPayLink } from './AppyPayLink';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -91,7 +90,7 @@ export function Footer() {
 
           <div className="ump-footer-col">
             <FooterHeading>{lang === 'pt' ? 'Envio, devoluções e preços' : 'Shipping, returns & prices'}</FooterHeading>
-            <InfoLine label={t('shipping', lang)} value={market === 'AO' ? <>{t('localCourierDelivery', lang)} <ZygoLink /></> : t('businessDays', lang)} />
+            <InfoLine label={t('shipping', lang)} value={market === 'AO' ? t('localCourierDelivery', lang) : t('businessDays', lang)} />
             <InfoLine
               label={t('returns', lang)}
               value={t(market === 'AO' ? 'footerReturnsNoteAo' : 'footerReturnsNotePt', lang)}

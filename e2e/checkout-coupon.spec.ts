@@ -9,7 +9,7 @@ function digitsOnly(text: string): string {
 }
 
 test.describe('Checkout authoritative delivery and coupon behaviour', () => {
-  test('AO: neighbourhood selection applies its editable Zygo zone price', async ({ page }) => {
+  test('AO: neighbourhood selection applies its editable courier zone price', async ({ page }) => {
     await mockCheckoutBackend(page);
     await seedCheckout(page, { market: 'AO', lang: 'en' });
     await page.goto('/checkout');

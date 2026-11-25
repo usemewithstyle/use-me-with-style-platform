@@ -2,7 +2,6 @@ import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'rea
 import { Navigate, useNavigate } from 'react-router-dom';
 import { C, F, t, formatMoney, type Lang } from '../../theme';
 import { useApp } from '../../state/AppContext';
-import { ZygoLink } from '../components/ZygoLink';
 import { useProducts } from '../../hooks/useProducts';
 import {
   createOrder,
@@ -1111,7 +1110,7 @@ export function Checkout() {
 
         <Section title={t('delivery', lang)}>
           {deliveryOptions.map((opt) => (
-            <RadioRow key={opt} name="delivery" value={opt} checked={deliveryMethod === opt} onSelect={() => setDeliveryMethod(opt)} label={opt === 'courier_ao' ? <ZygoLink /> : DELIVERY_LABEL_KEYS[opt] ? t(DELIVERY_LABEL_KEYS[opt], lang) : opt} />
+            <RadioRow key={opt} name="delivery" value={opt} checked={deliveryMethod === opt} onSelect={() => setDeliveryMethod(opt)} label={DELIVERY_LABEL_KEYS[opt] ? t(DELIVERY_LABEL_KEYS[opt], lang) : opt} />
           ))}
           {market === 'PT' && (
             <div style={{ marginTop: 8, fontSize: 11, color: C.inkSoft, lineHeight: 1.5 }}>

@@ -41,7 +41,7 @@ for (const [market, config] of Object.entries(MARKETS)) {
   const entries = manifest.markets?.[market] ?? []
   const routes = new Set(entries.map((entry) => entry.route))
   for (const route of STATIC_PRERENDER_ROUTES) expect(routes.has(route), `${market} is missing static route ${route}`)
-  expect(entries.some((entry) => entry.route.startsWith('/produto/')), `${market} has no product pages`)
+  if (process.env.PRERENDER_ALLOW_EMPTY_CATALOG !== 'true') expect(entries.some((entry) => entry.route.startsWith('/produto/')), `${market} has no product pages`)
 
   for (const entry of entries) {
     const label = `${market} ${entry.route}`

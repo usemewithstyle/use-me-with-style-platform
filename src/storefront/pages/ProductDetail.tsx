@@ -1,4 +1,3 @@
-import { ZygoLink } from '../components/ZygoLink';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -525,7 +524,7 @@ export function ProductDetail() {
               </button>
               {shippingOpen ? (
                 <div id="product-shipping-details" style={{ padding: '0 0 8px', color: C.inkSoft, fontSize: 12, lineHeight: 1.5 }}>
-                  {market === 'AO' ? <>{t('localCourierDelivery', lang)} <ZygoLink /></> : t('businessDays', lang)}
+                  {market === 'AO' ? t('localCourierDelivery', lang) : t('businessDays', lang)}
                 </div>
               ) : null}
             </div>

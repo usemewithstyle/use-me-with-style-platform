@@ -30,6 +30,7 @@ import {
   DEFAULT_TAX_RATES,
   ANGOLA_DELIVERY_ZONES,
   ANGOLA_ZONES,
+  TEST_DELIVERY_PRICE_KZ,
   normalizeAngolaShipping,
   normalizePortugalShipping,
   vatIncludedAmount,
@@ -650,7 +651,7 @@ export function Checkout() {
   // summary can still show the real shipping price struck through/waived
   // instead of silently vanishing into the merchandise discount number.
   const freeShipping = !testDelivery && (appliedCoupon?.freeShipping ?? false);
-  const shippingCost = testDelivery ? 1 : freeShipping
+  const shippingCost = testDelivery ? TEST_DELIVERY_PRICE_KZ : freeShipping
     ? 0
     : checkoutShippingCost(market, deliveryMethod, merchandiseTotalAfterDiscount, settings, deliveryCity, totalWeightGrams, form.postalCode);
   const total = merchandiseTotalAfterDiscount + shippingCost;
@@ -1073,7 +1074,7 @@ export function Checkout() {
                 style={{ width: '100%', padding: '11px 12px', fontSize: 13, border: `1px solid ${C.fieldBorder}`, borderRadius: 6, background: C.paper, color: C.ink }}
               >
                 <option value="">{t('selectMunicipality', lang)}</option>
-                {allowTestDelivery && <option value="Zona de teste">{lang === 'en' ? 'Test zone' : 'Zona de teste'} — 1 Kz</option>}
+                {allowTestDelivery && <option value="Zona de teste">{lang === 'en' ? 'Test zone' : 'Zona de teste'} — {formatMoney(TEST_DELIVERY_PRICE_KZ, 'AO', lang)}</option>}
                 {ANGOLA_ZONES.map((zone) => (
                   <optgroup key={zone} label={`${t(`zone${zone[0].toUpperCase()}${zone.slice(1)}`, lang)} — ${formatMoney(angolaShipping.zonePrices[zone], 'AO', lang)}`}>
                     {ANGOLA_DELIVERY_ZONES[zone].map((neighbourhood) => (

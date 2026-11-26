@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Check, Clock3 } from 'lucide-react';
 import { C, F, t } from '../../theme';
 import { useApp } from '../../state/AppContext';
-import { lookupOrder, type PublicOrderStatus } from '../../lib/api';
-import { clearPendingOrderEmail, peekPendingOrderEmail } from '../../lib/pendingOrderEmail';
+import { lookupOrder, retryAppyPayOrder, type PublicOrderStatus } from '../../lib/api';
+import { clearPendingOrderEmail, peekPendingOrderEmail, stashPendingOrderEmail } from '../../lib/pendingOrderEmail';
+import { emptyCheckoutForm, readAppyPayCheckout, saveAppyPayCheckout } from '../../lib/appyPayCheckout';
 import { loadManualWhatsappPayload } from '../../lib/manualWhatsapp';
 // Phase 2: import CustomerReturnForm when customer-initiated returns are released.
 
@@ -44,7 +45,8 @@ const ALL_STATUS_LABEL_KEY: Record<string, string> = {
 };
 
 export function ConfirmationLookup() {
-  const { lang, dispatchCart } = useApp();
+  const { lang, market, dispatchCart } = useApp();
+  const navigate = useNavigate();
   const { orderNumber: routeOrderNumber } = useParams<{ orderNumber: string }>();
   const [searchParams] = useSearchParams();
   const linkedOrderNumber = searchParams.get('order')?.trim() ?? '';
@@ -63,6 +65,9 @@ export function ConfirmationLookup() {
   const [email, setEmail] = useState(autoEmail ?? linkedEmail);
   const [result, setResult] = useState<PublicOrderStatus | null | 'not_found' | 'service_error'>(null);
   const [loading, setLoading] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState(false);
+  const lookedUpEmail = useRef(autoEmail ?? '');
   const [autoPolling, setAutoPolling] = useState(Boolean(autoEmail));
   const clearedAutoEmailRef = useRef(false);
 
@@ -140,14 +145,36 @@ export function ConfirmationLookup() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setRetryError(false);
     try {
       const order = await lookupOrder(orderNumber.trim(), email.trim());
+      lookedUpEmail.current = email.trim();
       setResult(order ?? 'not_found');
     } catch (err) {
       console.error('Order lookup failed', err);
       setResult('service_error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const retryPayment = async (retry: NonNullable<PublicOrderStatus['paymentRetry']>) => {
+    if (retrying) return;
+    setRetrying(true);
+    setRetryError(false);
+    try {
+      const { amount, ...order } = await retryAppyPayOrder(retry);
+      const previous = readAppyPayCheckout();
+      const form = previous?.order.orderNumber === order.orderNumber
+        ? previous.form : { ...emptyCheckoutForm('AO'), email: lookedUpEmail.current };
+      saveAppyPayCheckout({ order, amount, form, coupon: previous?.order.orderNumber === order.orderNumber ? previous.coupon : null });
+      stashPendingOrderEmail(order.orderNumber, lookedUpEmail.current);
+      navigate('/checkout');
+    } catch (err) {
+      console.error('Order payment retry failed', err);
+      setRetryError(true);
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -161,10 +188,10 @@ export function ConfirmationLookup() {
   // they keep the original unconditional "confirmed" hero. Only an AppyPay
   // redirect (autoEmail present) can land here before payment is verified.
   const heroKind: 'confirmed' | 'pending' | 'failed' =
-    !autoEmail || resolvedOrder?.paymentStatus === 'paid'
-      ? 'confirmed'
-      : resolvedOrder?.paymentStatus === 'failed'
-        ? 'failed'
+    resolvedOrder?.paymentStatus === 'failed'
+      ? 'failed'
+      : !autoEmail || resolvedOrder?.paymentStatus === 'paid'
+        ? 'confirmed'
         : 'pending';
 
   return (
@@ -349,11 +376,25 @@ export function ConfirmationLookup() {
           <div style={{ marginTop: 20, background: C.subtleBg, border: `1px solid ${C.surfaceBorder}`, borderRadius: 8, padding: 16 }}>
             <div style={{ fontFamily: F.display, fontSize: 16, color: C.ink, fontWeight: 800 }}>{result.orderNumber}</div>
             <div style={{ fontSize: 11, color: C.goldDeep, fontWeight: 800, marginTop: 4, textTransform: 'uppercase' }}>
-              {ALL_STATUS_LABEL_KEY[result.status] ? t(ALL_STATUS_LABEL_KEY[result.status], lang) : result.status}
+              {result.paymentRetry
+                ? (lang === 'pt' ? 'Pagamento não concluído' : 'Payment unsuccessful')
+                : ALL_STATUS_LABEL_KEY[result.status] ? t(ALL_STATUS_LABEL_KEY[result.status], lang) : result.status}
             </div>
             <div style={{ fontSize: 13, color: C.inkSoft, marginTop: 8 }}>
               {result.total} {result.currency}
             </div>
+            {market === 'AO' && result.paymentRetry && (
+              <div style={{ marginTop: 12 }}>
+                <button type="button" disabled={retrying} onClick={() => {
+                  if (result.paymentRetry) void retryPayment(result.paymentRetry);
+                }} style={{ padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.ctaBorder}`, background: C.ctaBg, color: C.onDark, fontWeight: 900 }}>
+                  {lang === 'pt' ? 'Tentar pagar novamente' : 'Try payment again'}
+                </button>
+                {retryError && <p role="alert">{lang === 'pt'
+                  ? 'Não foi possível tentar novamente. Consulte o estado da encomenda ou contacte o apoio.'
+                  : 'Could not retry the payment. Check the order status or contact support.'}</p>}
+              </div>
+            )}
             {result.cttTrackingCode && (
               <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.ruleLight}` }}>
                 <div style={{ fontSize: 10, color: C.goldDeep, fontWeight: 800, textTransform: 'uppercase' }}>{t(result.trackingProvider === 'zygo' ? 'zygoTrackingHeading' : 'cttTrackingHeading', lang)}</div>

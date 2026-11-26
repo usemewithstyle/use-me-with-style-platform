@@ -25,6 +25,7 @@ type AppyPayWidgetProps = {
   phoneNumber: string;
   lang: 'pt' | 'en';
   attempt: number;
+  onAuthorizationStarted: (startedAt: number) => void;
   onStateChange: (state: 'loading' | 'ready' | 'failed') => void;
 };
 
@@ -42,6 +43,7 @@ export function AppyPayWidget({
   lang,
   attempt,
   onStateChange,
+  onAuthorizationStarted,
 }: AppyPayWidgetProps) {
   const [loadFailed, setLoadFailed] = useState(false);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -158,11 +160,21 @@ export function AppyPayWidget({
     frameWindow?.addEventListener('error', onFrameError);
     frameWindow?.addEventListener('unhandledrejection', onFrameRejection);
 
+    // The hosted widget has no start event. Its GPO waiting screen appears
+    // when it submits the charge, after the shopper confirms the number.
+    let authorizationStarted = false;
     const observer = new MutationObserver(() => {
       const hasInteractiveContent = Boolean(
         container.querySelector('button, input, form, iframe, select, [role="button"], [class]'),
       );
       if (hasInteractiveContent) stateChangeRef.current('ready');
+      const waitingText = container.querySelector('.progress-page .waiting-text')?.textContent;
+      if (!authorizationStarted && waitingText?.includes('Multicaixa Express')) {
+        authorizationStarted = true;
+        // Leave final status and retry navigation to the checkout poll.
+        style.sheet?.insertRule('#appyPay-charges-v2 .return-button { display: none !important; }');
+        onAuthorizationStarted(Date.now());
+      }
     });
     observer.observe(container, { childList: true, subtree: true, attributes: true });
     const timeout = window.setTimeout(() => {
@@ -207,7 +219,7 @@ export function AppyPayWidget({
       observer.disconnect();
       script.remove();
     };
-  }, [amount, attempt, description, orderNumber, merchantTransactionId, phoneNumber, lang]);
+  }, [amount, attempt, description, orderNumber, merchantTransactionId, phoneNumber, lang, onAuthorizationStarted]);
 
   if (loadFailed) {
     return null;

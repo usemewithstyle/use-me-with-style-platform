@@ -475,6 +475,13 @@ export type ApiOrder = CreateOrderInput & {
   appyPayReferenceNumber?: string;
   appyPayReferenceDueDate?: string;
   appyPayVerifiedAt?: string;
+  appyPayAttempts?: {
+    merchantTransactionId: string;
+    transactionId: string;
+    responseCode?: number | null;
+    responseMessage?: string | null;
+    lateSuccessAt?: string | null;
+  }[];
   inventoryReservationStatus?: string;
   inventoryReservationExpiresAt?: string;
   inventoryReservationReleasedAt?: string;
@@ -488,7 +495,7 @@ export type ApiOrder = CreateOrderInput & {
 export type PublicOrderStatus = Pick<
   ApiOrder,
   'orderNumber' | 'status' | 'paymentStatus' | 'total' | 'currency' | 'deliveryRegion' | 'cttTrackingCode' | 'updatedAt'
-> & { trackingProvider?: 'ctt' | 'zygo'; trackingUrl?: string | null; returns?: Array<Pick<ApiReturn, 'returnNumber' | 'status' | 'resolution' | 'approvedAmount' | 'currency' | 'updatedAt'>> };
+> & { paymentRetry?: AppyPayAttemptAccess | null; trackingProvider?: 'ctt' | 'zygo'; trackingUrl?: string | null; returns?: Array<Pick<ApiReturn, 'returnNumber' | 'status' | 'resolution' | 'approvedAmount' | 'currency' | 'updatedAt'>> };
 
 export type ApiReturnItem = {
   orderItemId: string; product: string | number; productName: string; variantId?: string; colorId?: string;
@@ -1157,7 +1164,20 @@ export type AppyPayCreateOrderResult = {
   merchantTransactionId: string;
   cancellationToken: string;
   reservationExpiresAt: string;
+  amount?: number;
 };
+
+export type AppyPayAttemptAccess = Pick<AppyPayCreateOrderResult, 'merchantTransactionId' | 'cancellationToken'>;
+
+export async function retryAppyPayOrder(attempt: AppyPayAttemptAccess): Promise<AppyPayCreateOrderResult & { amount: number }> {
+  return request('/payments/appypay/retry-order', {
+    method: 'POST',
+    body: JSON.stringify({
+      merchantTransactionId: attempt.merchantTransactionId,
+      cancellationToken: attempt.cancellationToken,
+    }),
+  });
+}
 
 export type AppyPayOrderStatus = {
   orderNumber: string;

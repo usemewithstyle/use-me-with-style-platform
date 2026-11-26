@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Clock3, LockKeyhole, RotateCcw, ShieldCheck, X } from 'lucide-react';
 import { C, F } from '../../theme';
@@ -16,6 +16,12 @@ type Props = {
   phase: ModalPhase;
   attempt: number;
   cancellationConfirmed: boolean;
+  checkingSavedOrder: boolean;
+  awaitingSavedPayment: boolean;
+  initialAuthorizationStartedAt?: number;
+  onAuthorizationStarted: (startedAt: number) => void;
+  paymentFailed: boolean;
+  retryFailed: boolean;
   onWidgetStateChange: (state: 'loading' | 'ready' | 'failed') => void;
   onCancel: () => void;
   onRetry: () => void;
@@ -32,6 +38,12 @@ export function AppyPayPaymentModal({
   phase,
   attempt,
   cancellationConfirmed,
+  checkingSavedOrder,
+  awaitingSavedPayment,
+  initialAuthorizationStartedAt,
+  onAuthorizationStarted,
+  paymentFailed,
+  retryFailed,
   onWidgetStateChange,
   onCancel,
   onRetry,
@@ -45,11 +57,24 @@ export function AppyPayPaymentModal({
   const [now, setNow] = useState(() => Date.now());
   const expiresAt = new Date(order.reservationExpiresAt).getTime();
   const remainingSeconds = Math.max(0, Math.ceil((expiresAt - now) / 1000));
-  const countdown = useMemo(() => {
-    const minutes = Math.floor(remainingSeconds / 60);
-    const seconds = remainingSeconds % 60;
-    return `${minutes}:${String(seconds).padStart(2, '0')}`;
-  }, [remainingSeconds]);
+  const [authorizationStartedAt, setAuthorizationStartedAt] = useState(initialAuthorizationStartedAt ?? null);
+  const startCallbackRef = useRef(onAuthorizationStarted);
+  useEffect(() => {
+    startCallbackRef.current = onAuthorizationStarted;
+  }, [onAuthorizationStarted]);
+  const startAuthorization = useCallback((startedAt: number) => {
+    setNow(startedAt);
+    setAuthorizationStartedAt(startedAt);
+    startCallbackRef.current(startedAt);
+  }, []);
+  const paymentSeconds = authorizationStartedAt === null
+    ? null
+    : Math.max(0, Math.min(60, Math.ceil((authorizationStartedAt + 60_000 - now) / 1000)));
+  const authorizationPending = (paymentSeconds !== null || awaitingSavedPayment) && !paymentFailed;
+  const canCancel = phase !== 'releasing' && !checkingSavedOrder && !authorizationPending;
+  const showError = phase === 'error' || paymentFailed;
+  const canRetry = phase !== 'releasing' && (cancellationConfirmed || paymentFailed);
+  const countdown = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
   useEffect(() => {
     cancelRef.current = onCancel;
@@ -61,14 +86,14 @@ export function AppyPayPaymentModal({
     document.body.style.overflow = 'hidden';
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && phase !== 'releasing') cancelRef.current();
+      if (event.key === 'Escape' && canCancel) cancelRef.current();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [phase]);
+  }, [canCancel]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -76,11 +101,11 @@ export function AppyPayPaymentModal({
   }, []);
 
   useEffect(() => {
-    if (remainingSeconds === 0 && !expiredRef.current && phase !== 'error') {
+    if (remainingSeconds === 0 && !expiredRef.current && phase !== 'error' && !authorizationPending && !checkingSavedOrder && !paymentFailed) {
       expiredRef.current = true;
       expiredCallbackRef.current();
     }
-  }, [phase, remainingSeconds]);
+  }, [phase, remainingSeconds, authorizationPending, checkingSavedOrder, paymentFailed]);
 
   const copy = lang === 'pt' ? {
     eyebrow: 'Pagamento seguro',
@@ -95,6 +120,11 @@ export function AppyPayPaymentModal({
     errorHelp: cancellationConfirmed
       ? 'A reserva desta tentativa foi cancelada e o stock foi devolvido. Pode tentar novamente em segurança.'
       : 'Não conseguimos confirmar a libertação do stock. Não tente novamente até verificarmos a encomenda.',
+    paymentTime: 'Tempo para autorizar',
+    checkingPayment: 'A confirmar o estado do pagamento com o AppyPay…',
+    paymentFailed: paymentSeconds === 0 ? 'O tempo para autorizar terminou' : 'O pagamento não foi concluído',
+    retryPaymentHelp: 'Pode enviar um novo pedido de pagamento mantendo os dados da encomenda.',
+    retryError: 'Não foi possível iniciar um novo pagamento. Verifique a encomenda ou tente novamente.',
     retry: 'Tentar novamente',
     cancel: 'Cancelar pagamento',
     cancelling: 'A cancelar e a libertar o stock...',
@@ -114,6 +144,11 @@ export function AppyPayPaymentModal({
     errorHelp: cancellationConfirmed
       ? 'This attempt was cancelled and its stock was returned. You can safely try again.'
       : 'We could not confirm that the stock was released. Do not retry until the order has been checked.',
+    paymentTime: 'Time to authorize',
+    checkingPayment: 'Checking the payment status with AppyPay…',
+    paymentFailed: paymentSeconds === 0 ? 'The authorization time has ended' : 'The payment was unsuccessful',
+    retryPaymentHelp: 'You can send a new payment request using the same checkout details.',
+    retryError: 'Could not start a new payment. Check the order status or try again.',
     retry: 'Try again',
     cancel: 'Cancel payment',
     cancelling: 'Cancelling and releasing stock...',
@@ -126,7 +161,7 @@ export function AppyPayPaymentModal({
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(5,5,5,0.72)', backdropFilter: 'blur(6px)', display: 'grid', placeItems: 'center', padding: 'clamp(10px, 3vw, 28px)' }}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && phase !== 'releasing') onCancel();
+        if (event.target === event.currentTarget && canCancel) onCancel();
       }}
     >
       <div
@@ -150,9 +185,9 @@ export function AppyPayPaymentModal({
               ref={closeRef}
               type="button"
               aria-label={copy.close}
-              disabled={phase === 'releasing'}
+              disabled={!canCancel}
               onClick={onCancel}
-              style={{ width: 40, height: 40, flex: '0 0 40px', display: 'grid', placeItems: 'center', borderRadius: 999, border: `1px solid ${C.fieldBorder}`, background: C.paper, color: C.ink, cursor: phase === 'releasing' ? 'wait' : 'pointer' }}
+              style={{ width: 40, height: 40, flex: '0 0 40px', display: 'grid', placeItems: 'center', borderRadius: 999, border: `1px solid ${C.fieldBorder}`, background: C.paper, color: C.ink, cursor: canCancel ? 'pointer' : 'default' }}
             >
               <X size={19} aria-hidden="true" />
             </button>
@@ -171,33 +206,47 @@ export function AppyPayPaymentModal({
         </header>
 
         <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '11px clamp(18px, 4vw, 26px)', borderBottom: `1px solid ${C.ruleLight}`, background: C.tagBg }}>
-            <Clock3 size={17} color={C.goldDeep} aria-hidden="true" />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ color: C.ink, fontSize: 11, fontWeight: 900 }}>{copy.reserve}: {countdown}</div>
-              <div style={{ color: C.inkSoft, fontSize: 10, lineHeight: 1.35 }}>{copy.reserveHelp}</div>
+          {!showError && (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '11px clamp(18px, 4vw, 26px)', borderBottom: `1px solid ${C.ruleLight}`, background: C.tagBg }}>
+              <Clock3 size={17} color={C.goldDeep} aria-hidden="true" />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ color: C.ink, fontSize: 11, fontWeight: 900 }}>
+                  <span>{copy.reserve} · {countdown(remainingSeconds)}</span>
+                  {paymentSeconds !== null && (
+                    <span role="timer" aria-label={copy.paymentTime}> · {copy.paymentTime} {countdown(paymentSeconds)}</span>
+                  )}
+                </div>
+                <div style={{ color: C.inkSoft, fontSize: 10, lineHeight: 1.35 }}>{copy.reserveHelp}</div>
+              </div>
             </div>
-          </div>
+          )}
+          {authorizationPending && !awaitingSavedPayment && paymentSeconds === 0 && (
+            <p role="status" style={{ padding: '0 18px', color: C.ink }}>{copy.checkingPayment}</p>
+          )}
 
-          {phase === 'error' ? (
+          {showError ? (
             <div role="alert" style={{ minHeight: 360, display: 'grid', placeItems: 'center', padding: '34px 24px', textAlign: 'center' }}>
               <div style={{ maxWidth: 420 }}>
                 <div style={{ width: 54, height: 54, margin: '0 auto 16px', borderRadius: 999, display: 'grid', placeItems: 'center', background: C.dangerBg, color: C.danger }}>
                   <AlertTriangle size={25} aria-hidden="true" />
                 </div>
-                <h3 style={{ margin: '0 0 8px', color: C.ink, fontFamily: F.display, fontSize: 22 }}>{copy.errorTitle}</h3>
-                <p style={{ margin: 0, color: C.inkSoft, fontSize: 12, lineHeight: 1.65 }}>{copy.errorHelp}</p>
+                <h3 style={{ margin: '0 0 8px', color: C.ink, fontFamily: F.display, fontSize: 22 }}>{paymentFailed ? copy.paymentFailed : copy.errorTitle}</h3>
+                <p style={{ margin: 0, color: C.inkSoft, fontSize: 12, lineHeight: 1.65 }}>{retryFailed ? copy.retryError : paymentFailed ? copy.retryPaymentHelp : copy.errorHelp}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginTop: 22 }}>
-                  <button type="button" onClick={onRetry} disabled={!cancellationConfirmed} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderRadius: 8, border: `1px solid ${cancellationConfirmed ? C.ctaBorder : C.disabledBg}`, background: cancellationConfirmed ? C.ctaBg : C.disabledBg, color: cancellationConfirmed ? C.onDark : C.disabledFg, fontWeight: 900 }}>
+                  <button type="button" onClick={onRetry} disabled={!canRetry} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderRadius: 8, border: `1px solid ${canRetry ? C.ctaBorder : C.disabledBg}`, background: canRetry ? C.ctaBg : C.disabledBg, color: canRetry ? C.onDark : C.disabledFg, fontWeight: 900 }}>
                     <RotateCcw size={15} aria-hidden="true" /> {copy.retry}
                   </button>
                   <button type="button" onClick={onViewStatus} style={{ padding: '11px 16px', borderRadius: 8, border: `1px solid ${C.fieldBorder}`, background: C.paper, color: C.ink, fontWeight: 900 }}>{copy.status}</button>
                 </div>
               </div>
             </div>
+          ) : checkingSavedOrder || awaitingSavedPayment ? (
+            <div role="status" style={{ padding: '34px 24px', textAlign: 'center', color: C.ink }}>
+              {copy.checkingPayment}
+            </div>
           ) : (
             <div style={{ position: 'relative', background: '#fff', minHeight: 420 }}>
-              <AppyPayWidget
+              {remainingSeconds > 0 && <AppyPayWidget
                 amount={amount}
                 description={`Use Me With Style ${order.orderNumber}`}
                 orderNumber={order.orderNumber}
@@ -206,7 +255,8 @@ export function AppyPayPaymentModal({
                 lang={lang}
                 attempt={attempt}
                 onStateChange={onWidgetStateChange}
-              />
+                onAuthorizationStarted={startAuthorization}
+              />}
               {(phase === 'loading' || phase === 'releasing') && (
                 <div aria-live="polite" style={{ position: 'absolute', inset: 0, minHeight: 420, display: 'grid', placeItems: 'center', padding: 28, background: '#FFFDF8', color: '#171714', textAlign: 'center' }}>
                   <div style={{ maxWidth: 360 }}>
@@ -225,8 +275,11 @@ export function AppyPayPaymentModal({
             <ShieldCheck size={17} color={C.goldDeep} aria-hidden="true" style={{ flex: '0 0 auto' }} />
             <span>{copy.secure}</span>
           </div>
-          {phase !== 'error' && (
-            <button type="button" onClick={onCancel} disabled={phase === 'releasing'} style={{ width: '100%', marginTop: 12, padding: 11, borderRadius: 8, border: `1px solid ${C.fieldBorder}`, background: C.paper, color: C.ink, fontWeight: 900, cursor: phase === 'releasing' ? 'wait' : 'pointer' }}>
+          {!showError && (checkingSavedOrder || awaitingSavedPayment || (authorizationPending && paymentSeconds === 0)) && (
+            <button type="button" onClick={onViewStatus} style={{ marginTop: 12 }}>{copy.status}</button>
+          )}
+          {!showError && !checkingSavedOrder && !authorizationPending && (
+            <button type="button" onClick={onCancel} disabled={!canCancel} style={{ width: '100%', marginTop: 12, padding: 11, borderRadius: 8, border: `1px solid ${C.fieldBorder}`, background: C.paper, color: C.ink, fontWeight: 900, cursor: canCancel ? 'pointer' : 'default' }}>
               {phase === 'releasing' ? copy.cancelling : copy.cancel}
             </button>
           )}

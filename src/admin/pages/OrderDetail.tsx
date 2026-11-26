@@ -486,7 +486,12 @@ export function OrderDetail() {
                 confirmed via QA (TEST 2) that clicking the old CTA left
                 paymentStatus at 'pending' while this label already claimed
                 confirmed. Now driven by the field that actually tracks it. */}
-            {order.paymentStatus === 'paid' ? t('confirmedLabel', lang) : t('manualConfirmationNeeded', lang)}
+            {order.paymentStatus === 'paid' ? t('confirmedLabel', lang)
+              : order.paymentMethod === 'multicaixa_express' && order.appyPayStatus === 'Failed'
+                ? (lang === 'pt' ? 'Pagamento AppyPay falhou' : 'AppyPay payment failed')
+                : order.paymentMethod === 'multicaixa_express' && order.paymentStatus === 'pending'
+                  ? (lang === 'pt' ? 'A aguardar confirmação do AppyPay' : 'Waiting for AppyPay confirmation')
+                  : t('manualConfirmationNeeded', lang)}
           </div>
           <RowKV
             label={t('paymentMethodLabel', lang)}
@@ -658,7 +663,8 @@ function PaymentDiagnostics({ order, lang }: { order: ApiOrder; lang: Lang }) {
   const paymentTone = order.paymentStatus === 'paid' ? 'green' : order.paymentStatus === 'failed' ? 'red' : 'gold';
   const hasSummary = Boolean(details.providerStatus || details.paymentMethod || details.verifiedAt || details.inventoryStatus);
 
-  if (!hasSummary && details.technicalRows.length === 0) return null;
+  const pastAttempts = order.appyPayAttempts ?? [];
+  if (!hasSummary && details.technicalRows.length === 0 && pastAttempts.length === 0) return null;
 
   return (
     <div style={{ padding: '18px 28px 0' }}>
@@ -679,6 +685,22 @@ function PaymentDiagnostics({ order, lang }: { order: ApiOrder; lang: Lang }) {
             {details.providerStatus && <PaymentValue label={t('providerStatusLabel', lang)} value={details.providerStatus} />}
             {details.verifiedAt && <PaymentValue label={t('paymentVerifiedAtLabel', lang)} value={details.verifiedAt} />}
             {details.inventoryStatus && <PaymentValue label={t('inventoryStatusLabel', lang)} value={details.inventoryStatus} />}
+          </div>
+        )}
+
+        {pastAttempts.length > 0 && (
+          <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.ruleLight}`, fontSize: 11 }}>
+            <strong>{lang === 'pt' ? 'Tentativas anteriores' : 'Previous attempts'}</strong>
+            <ul style={{ paddingInlineStart: 18 }}>
+              {pastAttempts.map((attempt) => (
+                <li key={attempt.merchantTransactionId} style={{ marginTop: 8 }}>
+                  <span>{[attempt.merchantTransactionId, attempt.responseCode, attempt.responseMessage].filter((value) => value != null).join(' · ')}</span>
+                  {attempt.lateSuccessAt && <div style={{ color: C.danger, fontWeight: 800 }}>
+                    {lang === 'pt' ? 'Pagamento recebido após a nova tentativa. Verifique a transação' : 'Payment arrived after a new attempt. Review the transaction'} {attempt.transactionId}.
+                  </div>}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

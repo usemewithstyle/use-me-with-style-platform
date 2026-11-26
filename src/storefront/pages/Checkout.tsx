@@ -9,14 +9,17 @@ import {
   createAppyPayOrder,
   cancelAppyPayOrder,
   getAppyPayOrderStatus,
+  retryAppyPayOrder,
   createStripeCheckoutSession,
   fetchMarketSettings,
   fetchTaxRates,
   validateCoupon,
+  type AppyPayCreateOrderResult,
   type CreateOrderInput,
   type MarketSettings,
   type TaxRates,
 } from '../../lib/api';
+import { emptyCheckoutForm, readAppyPayCheckout, saveAppyPayCheckout, type CheckoutCoupon } from '../../lib/appyPayCheckout';
 import { waitForAppyPayResolution } from '../../lib/appyPayStatusPolling';
 import { isAppyPayWidgetConfigured } from '../../config/env';
 import { AppyPayPaymentModal } from '../components/AppyPayPaymentModal';
@@ -406,15 +409,19 @@ export function Checkout() {
   const [settings, setSettings] = useState<MarketSettings>(DEFAULT_MARKET_SETTINGS);
   const [taxRates, setTaxRates] = useState<TaxRates>(DEFAULT_TAX_RATES);
   const [submitting, setSubmitting] = useState(false);
-  const [appyPayOrder, setAppyPayOrder] = useState<{
-    orderNumber: string;
-    merchantTransactionId: string;
-    cancellationToken: string;
-    reservationExpiresAt: string;
-  } | null>(null);
+  const [savedCheckout] = useState(() => market === 'AO' ? readAppyPayCheckout() : null);
+  const [appyPayCheckout, setAppyPayCheckout] = useState(savedCheckout);
+  const appyPayOrder = appyPayCheckout?.order;
+  const isSavedOrder = !!savedCheckout && appyPayOrder === savedCheckout.order;
+  const [checkingSavedOrder, setCheckingSavedOrder] = useState(!!savedCheckout);
+  const [providerPending, setProviderPending] = useState(false);
   const [appyPayPhase, setAppyPayPhase] = useState<'loading' | 'ready' | 'releasing' | 'error'>('loading');
   const [appyPayAttempt, setAppyPayAttempt] = useState(0);
   const [appyPayCancellationConfirmed, setAppyPayCancellationConfirmed] = useState(false);
+  const [failedAppyPayAttempt, setFailedAppyPayAttempt] = useState<string | null>(null);
+  const appyPayPaymentFailed = !!appyPayOrder && failedAppyPayAttempt === appyPayOrder.merchantTransactionId;
+  const [appyPayRetryFailed, setAppyPayRetryFailed] = useState(false);
+  const appyPayRetryInFlight = useRef(false);
   const appyPayFailureHandledRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -427,7 +434,7 @@ export function Checkout() {
   // real at order-creation time (authoritativeOrder.ts) and rejects the
   // order if it's no longer valid by then, so this being stale is harmless.
   const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number; freeShipping: boolean; label: string } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<CheckoutCoupon | null>(savedCheckout?.coupon ?? null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponChecking, setCouponChecking] = useState(false);
 
@@ -439,30 +446,44 @@ export function Checkout() {
     if (!appyPayOrder) return;
     const controller = new AbortController();
     void waitForAppyPayResolution({
-      lookup: () => getAppyPayOrderStatus(appyPayOrder),
+      lookup: async () => {
+        const status = await getAppyPayOrderStatus(appyPayOrder);
+        if (controller.signal.aborted) return status;
+        const providerHasRequest = status.appyPayStatus === 'Requested' || status.appyPayStatus === 'Pending';
+        const savedRequestSubmitted = isSavedOrder && (!!savedCheckout.authorizationStartedAt || providerHasRequest);
+        setProviderPending(providerHasRequest);
+        if (status.paymentStatus === 'pending') setCheckingSavedOrder(false);
+
+        if (isSavedOrder && status.status === 'cancelled' && status.paymentStatus !== 'paid') {
+          if (status.appyPayStatus === 'Failed') return status;
+          if (savedRequestSubmitted) {
+            // A stock release can cancel the local order while the gateway still has the charge.
+            setCheckingSavedOrder(false);
+            return { ...status, paymentStatus: 'pending' };
+          }
+          saveAppyPayCheckout(null);
+          setAppyPayCheckout(null);
+          setCheckingSavedOrder(false);
+        }
+        return status;
+      },
       signal: controller.signal,
     }).then((resolvedOrder) => {
       if (!resolvedOrder || controller.signal.aborted) return;
-      navigate(`/encomenda-confirmada/${resolvedOrder.orderNumber}`);
+      if (resolvedOrder.paymentStatus === 'failed' && resolvedOrder.appyPayStatus === 'Failed') {
+        setCheckingSavedOrder(false);
+        setFailedAppyPayAttempt(appyPayOrder.merchantTransactionId);
+        return;
+      }
+      if (resolvedOrder.status !== 'cancelled' || resolvedOrder.paymentStatus === 'paid') {
+        saveAppyPayCheckout(null);
+        navigate(`/encomenda-confirmada/${resolvedOrder.orderNumber}`);
+      }
     });
     return () => controller.abort();
-  }, [appyPayOrder, navigate]);
+  }, [appyPayOrder, isSavedOrder, navigate, savedCheckout]);
 
-  const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    phoneCountryIso2: market === 'AO' ? 'AO' : 'PT',
-    phone: '',
-    email: '',
-    address: '',
-    addressLine2: '',
-    deliveryReference: '',
-    postalCode: '',
-    city: '',
-    country: market === 'AO' ? 'Angola' : 'Portugal',
-    taxId: '',
-    notes: '',
-  });
+  const [form, setForm] = useState(() => savedCheckout?.form ?? emptyCheckoutForm(market));
 
   // PT CTT postal codes are always 0000-000; NIFs are always 9 digits.
   // Angola has no equivalent structured postal-code convention in this
@@ -493,7 +514,7 @@ export function Checkout() {
   const appyPayLive = settings.angolaPaymentLive || isAppyPayWidgetConfigured();
 
   const [deliveryMethod, setDeliveryMethod] = useState(deliveryOptions[0]);
-  const [paymentMethod, setPaymentMethod] = useState(paymentOptions[0] ?? '');
+  const [paymentMethod, setPaymentMethod] = useState(savedCheckout ? 'multicaixa_express' : paymentOptions[0] ?? '');
 
   useEffect(() => {
     fetchMarketSettings()
@@ -521,11 +542,12 @@ export function Checkout() {
     // Market settings are external configuration; reset dependent form controls.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDeliveryMethod(deliveryOptions[0]);
-    setPaymentMethod(paymentOptions[0] ?? '');
+    setPaymentMethod(appyPayOrder ? 'multicaixa_express' : paymentOptions[0] ?? '');
     setForm((f) => ({
       ...f,
       country: market === 'AO' ? 'Angola' : 'Portugal',
-      phoneCountryIso2: market === 'AO' ? 'AO' : 'PT',
+      phoneCountryIso2: f.country === (market === 'AO' ? 'Angola' : 'Portugal')
+        ? f.phoneCountryIso2 : market === 'AO' ? 'AO' : 'PT',
     }));
     // The option arrays are selected from settings above; settings is the stable source.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -726,7 +748,7 @@ export function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentMethod, deliveryMethod]);
 
-  if (cart.length === 0) {
+  if (cart.length === 0 && !appyPayOrder) {
     return <Navigate to="/carrinho" replace />;
   }
 
@@ -806,20 +828,30 @@ export function Checkout() {
     };
   };
 
+  const rememberAppyPayOrder = (order: AppyPayCreateOrderResult, amount: number) => {
+    const snapshot = { order, form, amount, coupon: appliedCoupon };
+    saveAppyPayCheckout(snapshot);
+    setAppyPayCheckout(snapshot);
+    setProviderPending(false);
+    setCheckingSavedOrder(false);
+    stashPendingOrderEmail(order.orderNumber, form.email);
+  };
+
   const releaseAppyPayAttempt = async (mode: 'close' | 'failed' | 'expired') => {
     const order = appyPayOrder;
     if (!order || appyPayPhase === 'releasing') return;
     if (appyPayCancellationConfirmed) {
-      if (mode === 'close') setAppyPayOrder(null);
+      if (mode === 'close') setAppyPayCheckout(null);
       return;
     }
 
     setAppyPayPhase('releasing');
     try {
       await cancelAppyPayOrder(order);
+      saveAppyPayCheckout(null);
       setAppyPayCancellationConfirmed(true);
       if (mode === 'close') {
-        setAppyPayOrder(null);
+        setAppyPayCheckout(null);
         setError(lang === 'pt'
           ? 'Pagamento cancelado. A reserva foi libertada e o artigo voltou ao stock.'
           : 'Payment cancelled. The reservation was released and the item is back in stock.');
@@ -849,19 +881,31 @@ export function Checkout() {
   };
 
   const retryAppyPay = async () => {
-    if (!appyPayCancellationConfirmed || appyPayPhase === 'releasing') return;
-    setAppyPayPhase('loading');
-    setAppyPayCancellationConfirmed(false);
+    if (!appyPayOrder || appyPayPhase === 'releasing' || appyPayRetryInFlight.current) return;
+    if (!appyPayCancellationConfirmed && !appyPayPaymentFailed) return;
+    appyPayRetryInFlight.current = true;
+    setAppyPayRetryFailed(false);
+    setAppyPayPhase('releasing');
     try {
-      const order = await createAppyPayOrder(buildOrderInput());
+      const attempt = appyPayPaymentFailed
+        ? await retryAppyPayOrder(appyPayOrder)
+        : await (async () => {
+          const input = buildOrderInput();
+          const order = await createAppyPayOrder(input);
+          return { ...order, amount: order.amount ?? input.total };
+        })();
+      const { amount, ...order } = attempt;
       appyPayFailureHandledRef.current = null;
       setAppyPayAttempt((value) => value + 1);
-      setAppyPayOrder(order);
-      stashPendingOrderEmail(order.orderNumber, form.email);
+      rememberAppyPayOrder(order, amount);
+      setAppyPayCancellationConfirmed(false);
+      setAppyPayPhase('loading');
     } catch (err) {
       console.error('AppyPay retry failed', err);
-      setAppyPayCancellationConfirmed(true);
+      setAppyPayRetryFailed(true);
       setAppyPayPhase('error');
+    } finally {
+      appyPayRetryInFlight.current = false;
     }
   };
 
@@ -935,7 +979,7 @@ export function Checkout() {
     // PayPal has its own button/flow (see buildOrderInputForPaypal below) --
     // guards against an implicit form submit (e.g. pressing Enter in a
     // field) bypassing it, since no submit button is rendered in that case.
-    if (paymentMethod === 'paypal') return;
+    if (paymentMethod === 'paypal' || appyPayOrder || submitting) return;
     setError(null);
     if (!validateRequiredFields()) return;
 
@@ -954,13 +998,14 @@ export function Checkout() {
         if (!isAppyPayWidgetConfigured()) {
           throw new Error('AppyPay widget credentials are missing');
         }
-        const order = await createAppyPayOrder(buildOrderInput());
+        setAppyPayRetryFailed(false);
+        const input = buildOrderInput();
+        const order = await createAppyPayOrder(input);
         appyPayFailureHandledRef.current = null;
         setAppyPayCancellationConfirmed(false);
         setAppyPayPhase('loading');
         setAppyPayAttempt((value) => value + 1);
-        setAppyPayOrder(order);
-        stashPendingOrderEmail(order.orderNumber, form.email);
+        rememberAppyPayOrder(order, order.amount ?? input.total);
         return;
       }
 
@@ -1230,21 +1275,31 @@ export function Checkout() {
           <div ref={errorRef} role="alert" tabIndex={-1} style={{ marginTop: 16, padding: 12, background: C.dangerBg, color: C.danger, fontSize: 12, borderRadius: 6 }}>{error}</div>
         )}
 
-        {appyPayOrder && (
+        {appyPayCheckout && (
           <AppyPayPaymentModal
-            key={appyPayOrder.merchantTransactionId}
-            order={appyPayOrder}
-            amount={total}
-            formattedAmount={fmt(total)}
-            phoneNumber={fullPhone}
+            key={appyPayCheckout.order.merchantTransactionId}
+            order={appyPayCheckout.order}
+            amount={appyPayCheckout.amount}
+            formattedAmount={formatMoney(appyPayCheckout.amount, 'AO', lang)}
+            phoneNumber={form.phone ? fullPhone : ''}
             lang={lang}
             phase={appyPayPhase}
             attempt={appyPayAttempt}
             cancellationConfirmed={appyPayCancellationConfirmed}
+            checkingSavedOrder={checkingSavedOrder}
+            awaitingSavedPayment={isSavedOrder && (!!savedCheckout.authorizationStartedAt || providerPending)}
+            initialAuthorizationStartedAt={appyPayCheckout.authorizationStartedAt}
+            onAuthorizationStarted={(authorizationStartedAt) => {
+              const snapshot = { ...appyPayCheckout, authorizationStartedAt };
+              saveAppyPayCheckout(snapshot);
+              setAppyPayCheckout(snapshot);
+            }}
+            paymentFailed={appyPayPaymentFailed}
+            retryFailed={appyPayRetryFailed}
             onWidgetStateChange={handleAppyPayWidgetState}
             onCancel={() => void releaseAppyPayAttempt('close')}
             onRetry={() => void retryAppyPay()}
-            onViewStatus={() => navigate(`/encomenda-confirmada/${appyPayOrder.orderNumber}`)}
+            onViewStatus={() => navigate(`/encomenda-confirmada/${appyPayCheckout.order.orderNumber}`)}
             onExpired={() => void releaseAppyPayAttempt('expired')}
           />
         )}

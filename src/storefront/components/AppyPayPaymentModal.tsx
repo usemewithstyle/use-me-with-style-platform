@@ -23,6 +23,7 @@ type Props = {
   paymentFailed: boolean;
   retryFailed: boolean;
   onWidgetStateChange: (state: 'loading' | 'ready' | 'failed') => void;
+  onClose: () => void;
   onCancel: () => void;
   onRetry: () => void;
   onViewStatus: () => void;
@@ -45,6 +46,7 @@ export function AppyPayPaymentModal({
   paymentFailed,
   retryFailed,
   onWidgetStateChange,
+  onClose,
   onCancel,
   onRetry,
   onViewStatus,
@@ -52,7 +54,7 @@ export function AppyPayPaymentModal({
 }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const expiredRef = useRef(false);
-  const cancelRef = useRef(onCancel);
+  const closeCallbackRef = useRef(onClose);
   const expiredCallbackRef = useRef(onExpired);
   const [now, setNow] = useState(() => Date.now());
   const expiresAt = new Date(order.reservationExpiresAt).getTime();
@@ -77,16 +79,16 @@ export function AppyPayPaymentModal({
   const countdown = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
   useEffect(() => {
-    cancelRef.current = onCancel;
+    closeCallbackRef.current = onClose;
     expiredCallbackRef.current = onExpired;
-  }, [onCancel, onExpired]);
+  }, [onClose, onExpired]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && canCancel) cancelRef.current();
+      if (event.key === 'Escape' && canCancel) closeCallbackRef.current();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
@@ -130,7 +132,7 @@ export function AppyPayPaymentModal({
     cancelling: 'A cancelar e a libertar o stock...',
     status: 'Ver estado da encomenda',
     secure: 'O pagamento é processado pelo AppyPay. A encomenda só é confirmada após validação do pagamento.',
-    close: 'Fechar e cancelar pagamento',
+    close: 'Fechar janela de pagamento',
   } : {
     eyebrow: 'Secure payment',
     title: 'Complete with AppyPay',
@@ -154,14 +156,14 @@ export function AppyPayPaymentModal({
     cancelling: 'Cancelling and releasing stock...',
     status: 'View order status',
     secure: 'Payment is processed by AppyPay. Your order is only confirmed after the payment is verified.',
-    close: 'Close and cancel payment',
+    close: 'Close payment window',
   };
 
   return createPortal(
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(5,5,5,0.72)', backdropFilter: 'blur(6px)', display: 'grid', placeItems: 'center', padding: 'clamp(10px, 3vw, 28px)' }}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && canCancel) onCancel();
+        if (event.target === event.currentTarget && canCancel) onClose();
       }}
     >
       <div
@@ -186,7 +188,7 @@ export function AppyPayPaymentModal({
               type="button"
               aria-label={copy.close}
               disabled={!canCancel}
-              onClick={onCancel}
+              onClick={onClose}
               style={{ width: 40, height: 40, flex: '0 0 40px', display: 'grid', placeItems: 'center', borderRadius: 999, border: `1px solid ${C.fieldBorder}`, background: C.paper, color: C.ink, cursor: canCancel ? 'pointer' : 'default' }}
             >
               <X size={19} aria-hidden="true" />

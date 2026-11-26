@@ -412,6 +412,7 @@ export function Checkout() {
   const [savedCheckout] = useState(() => market === 'AO' ? readAppyPayCheckout() : null);
   const [appyPayCheckout, setAppyPayCheckout] = useState(savedCheckout);
   const appyPayOrder = appyPayCheckout?.order;
+  const paymentPaused = appyPayCheckout?.paused === true;
   const isSavedOrder = !!savedCheckout && appyPayOrder === savedCheckout.order;
   const [checkingSavedOrder, setCheckingSavedOrder] = useState(!!savedCheckout);
   const [providerPending, setProviderPending] = useState(false);
@@ -837,11 +838,11 @@ export function Checkout() {
     stashPendingOrderEmail(order.orderNumber, form.email);
   };
 
-  const releaseAppyPayAttempt = async (mode: 'close' | 'failed' | 'expired') => {
+  const releaseAppyPayAttempt = async (mode: 'cancel' | 'failed' | 'expired') => {
     const order = appyPayOrder;
     if (!order || appyPayPhase === 'releasing') return;
     if (appyPayCancellationConfirmed) {
-      if (mode === 'close') setAppyPayCheckout(null);
+      if (mode === 'cancel') setAppyPayCheckout(null);
       return;
     }
 
@@ -850,7 +851,7 @@ export function Checkout() {
       await cancelAppyPayOrder(order);
       saveAppyPayCheckout(null);
       setAppyPayCancellationConfirmed(true);
-      if (mode === 'close') {
+      if (mode === 'cancel') {
         setAppyPayCheckout(null);
         setError(lang === 'pt'
           ? 'Pagamento cancelado. A reserva foi libertada e o artigo voltou ao stock.'
@@ -860,9 +861,26 @@ export function Checkout() {
       }
     } catch (err) {
       console.error('AppyPay cancellation failed', err);
+      if (appyPayCheckout?.paused) {
+        const snapshot = { ...appyPayCheckout, paused: false };
+        saveAppyPayCheckout(snapshot);
+        setAppyPayCheckout(snapshot);
+      }
       setAppyPayCancellationConfirmed(false);
       setAppyPayPhase('error');
     }
+  };
+
+  const setAppyPayPaused = (paused: boolean) => {
+    if (!appyPayCheckout || appyPayPhase === 'releasing' || checkingSavedOrder) return;
+    if (appyPayCancellationConfirmed) {
+      setAppyPayCheckout(null);
+      return;
+    }
+    const snapshot = { ...appyPayCheckout, paused };
+    saveAppyPayCheckout(snapshot);
+    setAppyPayCheckout(snapshot);
+    if (!paused && appyPayPhase === 'ready') setAppyPayPhase('loading');
   };
 
   const handleAppyPayWidgetState = (state: 'loading' | 'ready' | 'failed') => {
@@ -1075,7 +1093,7 @@ export function Checkout() {
           descendant of its form, just reference its id -- which is what
           makes splitting them into separate grid columns possible at all
           without reaching for extra state/refs. */}
-      <form id="checkout-form" onSubmit={handleSubmit} style={{ padding: '0 20px', minWidth: 0 }}>
+      <form id="checkout-form" inert={paymentPaused} onSubmit={handleSubmit} style={{ padding: '0 20px', minWidth: 0 }}>
         <Section title={t('contact', lang)}>
           <Field label={t('firstName', lang)} value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} required />
           <Field label={t('lastName', lang)} value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} required />
@@ -1198,7 +1216,7 @@ export function Checkout() {
       </form>
 
       <div className="ump-checkout-summary" style={{ padding: '0 20px' }}>
-        <div style={{ marginBottom: 12 }}>
+        <div inert={paymentPaused} style={{ marginBottom: 12 }}>
           {appliedCoupon ? (
             <div data-testid="applied-coupon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 12px', background: C.tagBg, border: `1px solid ${C.gold}`, borderRadius: 6 }}>
               <div style={{ fontSize: 12, color: C.ink }}>
@@ -1275,7 +1293,7 @@ export function Checkout() {
           <div ref={errorRef} role="alert" tabIndex={-1} style={{ marginTop: 16, padding: 12, background: C.dangerBg, color: C.danger, fontSize: 12, borderRadius: 6 }}>{error}</div>
         )}
 
-        {appyPayCheckout && (
+        {appyPayCheckout && !paymentPaused && (
           <AppyPayPaymentModal
             key={appyPayCheckout.order.merchantTransactionId}
             order={appyPayCheckout.order}
@@ -1297,11 +1315,30 @@ export function Checkout() {
             paymentFailed={appyPayPaymentFailed}
             retryFailed={appyPayRetryFailed}
             onWidgetStateChange={handleAppyPayWidgetState}
-            onCancel={() => void releaseAppyPayAttempt('close')}
+            onClose={() => setAppyPayPaused(true)}
+            onCancel={() => void releaseAppyPayAttempt('cancel')}
             onRetry={() => void retryAppyPay()}
             onViewStatus={() => navigate(`/encomenda-confirmada/${appyPayCheckout.order.orderNumber}`)}
             onExpired={() => void releaseAppyPayAttempt('expired')}
           />
+        )}
+
+        {paymentPaused && (
+          <div style={{ marginTop: 16, padding: 14, border: `1px solid ${C.ruleLight}`, borderRadius: 8 }}>
+            <p role="status" style={{ margin: '0 0 12px', color: C.inkSoft, fontSize: 12 }}>
+              {lang === 'pt'
+                ? `Pode retomar o pagamento da encomenda #${appyPayOrder?.orderNumber}. Para alterar os dados, cancele este pagamento.`
+                : `You can resume payment for order #${appyPayOrder?.orderNumber}. To change your details, cancel this payment.`}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <button type="button" onClick={() => setAppyPayPaused(false)} disabled={checkingSavedOrder || appyPayPhase === 'releasing'} style={{ padding: '10px 14px', border: `1px solid ${C.ctaBorder}`, borderRadius: 8, background: C.ctaBg, color: C.onDarkGold, fontWeight: 800 }}>
+                {t('payNow', lang)}
+              </button>
+              <button type="button" onClick={() => void releaseAppyPayAttempt('cancel')} disabled={checkingSavedOrder || appyPayPhase === 'releasing'} style={{ padding: '10px 14px', border: `1px solid ${C.rule}`, borderRadius: 8, background: C.paper, color: C.ink, fontWeight: 800 }}>
+                {lang === 'pt' ? 'Cancelar pagamento' : 'Cancel payment'}
+              </button>
+            </div>
+          </div>
         )}
 
         {appyPayOrder ? null : paymentMethod === 'paypal' ? (

@@ -33,6 +33,7 @@ export function Orders() {
   const attentionFilter = searchParams.get('attention');
   const excludeCancelled = searchParams.get('excludeCancelled') === '1';
   const dashboardContext = searchParams.get('context');
+  const showUnsubmitted = searchParams.get('showUnsubmitted') === '1';
   const setStatusFilter = (status: string) => {
     const next = new URLSearchParams(searchParams);
     if (status) next.set('status', status);
@@ -103,13 +104,17 @@ export function Orders() {
   const operationalFiltered = useMemo(() => {
     if (!dateSearchFiltered) return dateSearchFiltered;
     return dateSearchFiltered.filter((order) => {
+      const unsubmittedAppyPayCheckout = order.paymentMethod === 'multicaixa_express' &&
+        ['new', 'cancelled'].includes(order.status) && order.paymentStatus !== 'paid' &&
+        !order.appyPayStatus && !order.appyPayTransactionId && !order.paymentReference && !order.appyPayAttempts?.length;
+      if (!showUnsubmitted && unsubmittedAppyPayCheckout) return false;
       if (excludeCancelled && order.status === 'cancelled') return false;
       if (paymentFilter && order.paymentStatus !== paymentFilter) return false;
       if (attentionFilter === 'confirmation' && !['new', 'payment_review'].includes(order.status)) return false;
       if (attentionFilter === 'refund' && !(order.status === 'cancelled' && order.paymentStatus === 'paid')) return false;
       return true;
     });
-  }, [attentionFilter, dateSearchFiltered, excludeCancelled, paymentFilter]);
+  }, [attentionFilter, dateSearchFiltered, excludeCancelled, paymentFilter, showUnsubmitted]);
 
   // Date + search + market -- this is the base the STATUS pill counts are
   // computed from (countFor below), so a date/search/market filter still
@@ -356,6 +361,15 @@ export function Orders() {
         >
           {t('exportOrders', lang)}
         </button>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: C.inkSoft }}>
+          <input type="checkbox" checked={showUnsubmitted} onChange={(event) => {
+            const next = new URLSearchParams(searchParams);
+            if (event.target.checked) next.set('showUnsubmitted', '1');
+            else next.delete('showUnsubmitted');
+            setSearchParams(next);
+          }} />
+          {lang === 'pt' ? 'Mostrar checkouts sem pedido AppyPay registado' : 'Show checkouts without a recorded AppyPay request'}
+        </label>
         <div style={{ flexBasis: '100%', textAlign: 'right', fontSize: 10.5, color: C.inkSoft }}>{t('ordersExportScopeNote', lang, { n: orders?.length ?? 0 })} {t('phase2ReportingNote', lang)}</div>
       </div>
 

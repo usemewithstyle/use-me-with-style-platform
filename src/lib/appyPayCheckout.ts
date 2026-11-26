@@ -28,6 +28,7 @@ type SavedAppyPayCheckout = {
   coupon: CheckoutCoupon | null;
   amount: number;
   authorizationStartedAt?: number;
+  paused?: boolean;
 };
 
 export function readAppyPayCheckout(): SavedAppyPayCheckout | null {

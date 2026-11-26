@@ -70,6 +70,10 @@ test('Express countdown waits for submission and retry waits for a verified fail
     } });
   });
 
+  await page.route('**/api/payments/appypay/cancel-order', (route) => {
+    operations.push(`cancel ${route.request().postDataJSON().merchantTransactionId}`);
+    return route.fulfill({ json: { cancelled: true } });
+  });
   await page.route('**/api/order-lookup', (route) => route.fulfill({ json: { order: lookupAvailable ? {
     orderNumber: 'AO-LOOKUP',
     status: 'payment_review',
@@ -95,6 +99,17 @@ test('Express countdown waits for submission and retry waits for a verified fail
   await expect(modal.getByText('#AO-TEST1')).toBeVisible();
   await expect(page.getByLabel(t('email', 'en'))).toHaveValue('test@example.com');
   await expect(page.getByLabel(t('municipality', 'en'))).toHaveValue('Talatona');
+  expect(operations).toEqual(['create 1']);
+
+  for (let cycle = 0; cycle < 4; cycle += 1) {
+    await modal.getByRole('button', { name: 'Close payment window' }).click();
+    await expect(modal).toHaveCount(0);
+    await expect(page.getByText('You can resume payment for order #AO-TEST1.', { exact: false })).toBeVisible();
+    if (cycle === 0) await page.reload();
+    await page.getByRole('button', { name: t('payNow', 'en'), exact: true }).click();
+    await expect(modal.getByText('#AO-TEST1')).toBeVisible();
+    await expect(widget.getByLabel('Express number')).toBeVisible();
+  }
   expect(operations).toEqual(['create 1']);
 
   await widget.getByLabel('Express number').fill('923000000');
@@ -138,5 +153,37 @@ test('Express countdown waits for submission and retry waits for a verified fail
   await expect(modal.getByText('#AO-LOOKUP')).toBeVisible();
   await expect(widget.getByLabel('Express number')).toBeVisible();
   expect(operations).toEqual(['create 1', 'retry test1', 'retry lookup0']);
+  await modal.getByRole('button', { name: 'Close payment window' }).click();
+  await page.getByRole('button', { name: 'Cancel payment', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Payment cancelled');
+  expect(operations).toEqual(['create 1', 'retry test1', 'retry lookup0', 'cancel lookup1']);
 
+});
+
+test('the order queue keeps unsubmitted AppyPay checkouts out of the default view', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ump-lang-pref', 'en'));
+  await page.route('**/api/users/me', (route) => route.fulfill({ json: {
+    user: { id: 1, email: 'admin@example.test' },
+  } }));
+  const appyPayOrder = {
+    market: 'AO', paymentMethod: 'multicaixa_express', deliveryMethod: 'courier_ao',
+    customerName: 'Customer', customerPhone: '923000000', customerEmail: 'test@example.test',
+    total: 13_500, currency: 'Kz', createdAt: new Date().toISOString(),
+  };
+  const orders = [
+    { ...appyPayOrder, id: 1, orderNumber: 'AO-UNSUBMITTED', status: 'new', paymentStatus: 'pending' },
+    { ...appyPayOrder, id: 2, orderNumber: 'AO-ABANDONED', status: 'cancelled', paymentStatus: 'failed' },
+    { ...appyPayOrder, id: 3, orderNumber: 'AO-DECLINED', status: 'payment_review', paymentStatus: 'failed', appyPayStatus: 'Failed' },
+    { ...appyPayOrder, id: 4, orderNumber: 'AO-SUBMITTED', status: 'new', paymentStatus: 'pending', appyPayStatus: 'Requested' },
+  ];
+  await page.route('**/api/orders?**', (route) => route.fulfill({ json: { docs: orders, totalDocs: orders.length } }));
+  await page.goto('/admin/encomendas');
+  await expect(page.getByText('#AO-SUBMITTED')).toBeVisible();
+  await expect(page.getByText('#AO-DECLINED')).toBeVisible();
+  await expect(page.getByText('#AO-UNSUBMITTED')).toHaveCount(0);
+  await expect(page.getByText('#AO-ABANDONED')).toHaveCount(0);
+
+  await page.getByRole('checkbox', { name: 'Show checkouts without a recorded AppyPay request' }).click();
+  await expect(page.getByText('#AO-UNSUBMITTED')).toBeVisible();
+  await expect(page.getByText('#AO-ABANDONED')).toBeVisible();
 });

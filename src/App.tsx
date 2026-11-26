@@ -861,9 +861,8 @@ ${Object.entries(DARK_VARS).map(([k, v]) => `          ${k}: ${v};`).join('\n')}
         }
         .ump-pd-desktop-actions { display: none; }
         @media (min-width: 720px) {
-          .ump-product-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: stretch; max-width: 1000px; margin: 0 auto; }
-          .ump-product-info { display: flex; flex-direction: column; padding-bottom: 0 !important; }
-          .ump-pd-desktop-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 24px; }
+          .ump-product-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; padding-bottom: 32px; max-width: 1000px; margin: 0 auto; }
+          .ump-pd-desktop-actions { display: flex; gap: 10px; margin-top: 24px; }
           .ump-pd-mobile-actions { display: none !important; }
         }
         /* Bottom offset clears the fixed bottom tab bar (~58px tall) on true

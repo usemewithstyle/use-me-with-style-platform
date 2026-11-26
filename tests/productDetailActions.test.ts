@@ -18,7 +18,4 @@ test('product detail keeps mobile actions sticky and places desktop actions belo
   assert.match(styles, /\.ump-pd-desktop-actions[\s\S]*display: none/);
   assert.match(styles, /@media \(min-width: 720px\)[\s\S]*\.ump-pd-desktop-actions[\s\S]*display: flex/);
   assert.match(styles, /@media \(min-width: 720px\)[\s\S]*\.ump-pd-mobile-actions[\s\S]*display: none/);
-  assert.match(styles, /@media \(min-width: 720px\)[\s\S]*\.ump-product-info[\s\S]*flex-direction: column/);
-  assert.match(styles, /@media \(min-width: 720px\)[\s\S]*\.ump-product-info[\s\S]*padding-bottom: 0 !important/);
-  assert.match(styles, /\.ump-pd-desktop-actions[\s\S]*margin-top: auto/);
 });

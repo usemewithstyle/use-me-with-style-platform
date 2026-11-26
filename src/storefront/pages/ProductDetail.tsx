@@ -6,6 +6,7 @@ import { Check, ChevronDown, ChevronLeft, ChevronRight, Search, X } from 'lucide
 import { C, F, t } from '../../theme';
 import { useApp, useFormatOriginalPrice, useFormatPrice } from '../../state/AppContext';
 import { useProducts } from '../../hooks/useProducts';
+import { completeTheLook } from '../../lib/completeTheLook';
 import { ProductPhoto } from '../../components/ProductPhoto';
 import { ProductCard } from '../components/ProductCard';
 import { ProductGalleryTrack } from '../components/ProductGalleryTrack';
@@ -134,7 +135,7 @@ export function ProductDetail() {
   const isLowStock = stockForSize > 0 && stockForSize <= 3;
   const isOutOfStock = product.marketStatus === 'sold_out' || stockForSize === 0;
   const isActiveColorSoldOut = Boolean(activeColor && !colorHasStock(product, activeColor));
-  const recommendations = products.filter((p) => p.cat === product.cat && p.id !== product.id).slice(0, 4);
+  const recommendations = completeTheLook(product, products);
 
   // Already-in-cart quantity for this exact colour+size, so a repeated
   // click at the stock cap can be told apart from one that actually added
@@ -584,16 +585,16 @@ export function ProductDetail() {
       </div>
 
       {recommendations.length > 0 && (
-        <div className="ump-pd-width" style={{ padding: '18px 20px 24px', background: C.paper }}>
-          <div style={{ fontSize: 9, letterSpacing: 2, color: C.goldDeep, fontWeight: 800, textTransform: 'uppercase', marginBottom: 10 }}>
+        <section className="ump-pd-width" aria-labelledby="complete-the-look" style={{ padding: '18px 20px 24px', background: C.paper }}>
+          <h2 id="complete-the-look" style={{ fontSize: 9, letterSpacing: 2, color: C.goldDeep, fontWeight: 800, textTransform: 'uppercase', margin: '0 0 10px' }}>
             {t('completeTheLook', lang)}
-          </div>
+          </h2>
           <div className="ump-grid-auto">
             {recommendations.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

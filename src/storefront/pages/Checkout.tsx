@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'rea
 import { Navigate, useNavigate } from 'react-router-dom';
 import { C, F, t, formatMoney, type Lang } from '../../theme';
 import { useApp } from '../../state/AppContext';
+import { ZygoLink } from '../components/ZygoLink';
 import { useProducts } from '../../hooks/useProducts';
 import {
   createOrder,
@@ -608,10 +609,8 @@ export function Checkout() {
   const eurSubtotal = eurItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
   const allowTestDelivery = market === 'AO' && !usesEurSettlement && cart.length > 0 &&
     cart.every(item => products.some(p => p.id === item.id && p.slug === 't-shirt-de-teste'));
-  const testDelivery = allowTestDelivery && form.city === 'Zona de teste';
-  useEffect(() => {
-    if (!allowTestDelivery && form.city === 'Zona de teste') setForm(f => ({ ...f, city: '' }));
-  }, [allowTestDelivery, form.city]);
+  const deliveryCity = !allowTestDelivery && market === 'AO' && form.city === 'Zona de teste' ? '' : form.city;
+  const testDelivery = allowTestDelivery && deliveryCity === 'Zona de teste';
 
   const settlementSubtotal = usesEurSettlement ? eurSubtotal : subtotal;
 
@@ -653,7 +652,7 @@ export function Checkout() {
   const freeShipping = !testDelivery && (appliedCoupon?.freeShipping ?? false);
   const shippingCost = testDelivery ? 1 : freeShipping
     ? 0
-    : checkoutShippingCost(market, deliveryMethod, merchandiseTotalAfterDiscount, settings, form.city, totalWeightGrams, form.postalCode);
+    : checkoutShippingCost(market, deliveryMethod, merchandiseTotalAfterDiscount, settings, deliveryCity, totalWeightGrams, form.postalCode);
   const total = merchandiseTotalAfterDiscount + shippingCost;
   const fmt = (n: number) => formatMoney(n, market === 'PT' || usesEurSettlement ? 'PT' : 'AO', lang);
 
@@ -761,7 +760,7 @@ export function Checkout() {
         // definition requires market === 'AO' -- postalCode is a PT-only
         // field, so it's always absent here.
         postalCode: undefined,
-        city: form.city,
+        city: deliveryCity,
         country: form.country,
         taxId: form.taxId || undefined,
         notes: form.notes || undefined,
@@ -789,7 +788,7 @@ export function Checkout() {
       addressLine2: form.addressLine2 || undefined,
       deliveryReference: market === 'AO' ? form.deliveryReference.trim() || undefined : undefined,
       postalCode: market === 'PT' ? form.postalCode : undefined,
-      city: form.city,
+      city: deliveryCity,
       country: form.country,
       taxId: form.taxId || undefined,
       notes: form.notes || undefined,
@@ -913,7 +912,7 @@ export function Checkout() {
   };
 
   const validateRequiredFields = (): boolean => {
-    if (!form.firstName || !form.lastName || !form.phone || !form.email || !form.address || !form.addressLine2 || !form.city) {
+    if (!form.firstName || !form.lastName || !form.phone || !form.email || !form.address || !form.addressLine2 || !deliveryCity) {
       setError(t('fillRequiredFields', lang));
       return false;
     }
@@ -1068,7 +1067,7 @@ export function Checkout() {
               <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 6 }}>{t('municipality', lang)} *</div>
               <select
                 className="ump-form-control"
-                value={form.city}
+                value={deliveryCity}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
                 required
                 style={{ width: '100%', padding: '11px 12px', fontSize: 13, border: `1px solid ${C.fieldBorder}`, borderRadius: 6, background: C.paper, color: C.ink }}
@@ -1085,7 +1084,7 @@ export function Checkout() {
               </select>
             </label>
           ) : (
-            <Field label={t('city', lang)} value={form.city} onChange={(v) => setForm({ ...form, city: v })} required />
+            <Field label={t('city', lang)} value={deliveryCity} onChange={(v) => setForm({ ...form, city: v })} required />
           )}
           {market === 'AO' && (
             <Field
@@ -1118,7 +1117,7 @@ export function Checkout() {
 
         <Section title={t('delivery', lang)}>
           {deliveryOptions.map((opt) => (
-            <RadioRow key={opt} name="delivery" value={opt} checked={deliveryMethod === opt} onSelect={() => setDeliveryMethod(opt)} label={DELIVERY_LABEL_KEYS[opt] ? t(DELIVERY_LABEL_KEYS[opt], lang) : opt} />
+            <RadioRow key={opt} name="delivery" value={opt} checked={deliveryMethod === opt} onSelect={() => setDeliveryMethod(opt)} label={opt === 'courier_ao' ? <ZygoLink /> : DELIVERY_LABEL_KEYS[opt] ? t(DELIVERY_LABEL_KEYS[opt], lang) : opt} />
           ))}
           {market === 'PT' && (
             <div style={{ marginTop: 8, fontSize: 11, color: C.inkSoft, lineHeight: 1.5 }}>
@@ -1208,7 +1207,7 @@ export function Checkout() {
               // threshold. `freeShipping` (an applied free-delivery coupon) still
               // takes priority and reads as free immediately, since that one IS
               // genuinely free regardless of municipality.
-              market === 'AO' && !freeShipping && !form.city
+              market === 'AO' && !freeShipping && !deliveryCity
                 ? t('shippingPendingMunicipality', lang)
                 : shippingCost === 0
                   ? t('free', lang)

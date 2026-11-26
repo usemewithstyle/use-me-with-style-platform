@@ -8,7 +8,7 @@ export function shipmentExtra(savedCode: string | null | undefined, typedCode: s
   return typed && typed !== (savedCode ?? '').trim() ? { cttTrackingCode: typed } : undefined;
 }
 
-/** Angola orders get a tracking number from the local courier; shipping without one means the customer
+/** Angola orders get a tracking number from Zygo; shipping without one means the customer
  * receives a second, short email when it is added later. Portugal's untracked CTT Standard
  * has no number at all, so it is never asked. */
 export function shouldConfirmNoTracking(market: string, savedCode: string | null | undefined, typedCode: string | null | undefined): boolean {

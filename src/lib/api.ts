@@ -412,7 +412,7 @@ export type CreateOrderInput = {
    * separate from the free-text `address` line so it renders cleanly on
    * shipping labels/invoices. */
   addressLine2?: string;
-  /** Angola only: landmark the local courier uses to find the address. */
+  /** Angola only: landmark the courier (Zygo) uses to find the address. */
   deliveryReference?: string;
   /** Required for PT (validated client-side against the 0000-000 CTT
    * format); not collected for AO, which has no equivalent postal-code
@@ -488,7 +488,7 @@ export type ApiOrder = CreateOrderInput & {
 export type PublicOrderStatus = Pick<
   ApiOrder,
   'orderNumber' | 'status' | 'paymentStatus' | 'total' | 'currency' | 'deliveryRegion' | 'cttTrackingCode' | 'updatedAt'
-> & { trackingProvider?: 'ctt' | 'courier_ao'; trackingUrl?: string | null; returns?: Array<Pick<ApiReturn, 'returnNumber' | 'status' | 'resolution' | 'approvedAmount' | 'currency' | 'updatedAt'>> };
+> & { trackingProvider?: 'ctt' | 'zygo'; trackingUrl?: string | null; returns?: Array<Pick<ApiReturn, 'returnNumber' | 'status' | 'resolution' | 'approvedAmount' | 'currency' | 'updatedAt'>> };
 
 export type ApiReturnItem = {
   orderItemId: string; product: string | number; productName: string; variantId?: string; colorId?: string;
@@ -523,7 +523,7 @@ export type MarketSettings = {
    * the client has a Portuguese legal entity and approved providers. */
   angolaPaymentMethods: string[];
   angolaDeliveryMethods: string[];
-  /** Local courier delivery price per Luanda zone (Kz) -- see storefront/shipping.ts. The old
+  /** Zygo delivery price per Luanda zone (Kz) -- see storefront/shipping.ts. The old
    * 16-municipality price table is no longer used. */
   angolaZonePriceCentro?: number;
   angolaZonePriceSul?: number;

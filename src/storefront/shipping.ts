@@ -8,14 +8,14 @@ export type PortugalShippingConfig = {
   portugalHeavyIslandsShippingPrice?: number | null;
 };
 
-// Angola delivery is done by local courier in Luanda, priced by four zones. The
+// Angola delivery is done by Zygo (zygo.ao) in Luanda, priced by four zones. The
 // neighbourhood -> zone map is fixed (and mirrored in the CMS, which is the
 // authority); zone prices and the free-delivery threshold come from the market
 // settings. The order's `city` stores the neighbourhood the customer picks.
 export const ANGOLA_DELIVERY_ZONES = {
-  centro: ['Ingombotas', 'Maianga', 'Alvalade', 'Maculusso', 'Mutamba', 'Cassenda'],
+  centro: ['Ingombotas', 'Maianga', 'Alvalade', 'Maculusso', 'Mutamba', 'Cazenga'],
   sul: ['Talatona', 'Patriota', 'Belas', 'Camama', 'Benfica'],
-  norte: ['Vila Alice', 'Sambizanga', 'Rangel', 'Cazenga', 'Hoji ya Henda'],
+  norte: ['Vila Alice', 'Sambizanga', 'Rangel', 'Cassenda', 'Hoji ya Henda'],
   periferia: ['Viana', 'Kilamba', 'Zango', 'Cacuaco', 'Funda'],
 } as const;
 

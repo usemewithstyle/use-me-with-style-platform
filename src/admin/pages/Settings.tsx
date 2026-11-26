@@ -297,7 +297,7 @@ export function Settings() {
                 />
               }
             />
-            {/* Angola delivery is by local courier in four zones (2026-10-08). The 16-municipality price
+            {/* Angola delivery is by Zygo in four zones (2026-10-08). The 16-municipality price
                 editor below is commented out, not deleted, in case it is needed again:
             <ConfigRow
               label={t('municipalityPrices', lang)}

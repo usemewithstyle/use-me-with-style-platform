@@ -19,7 +19,6 @@ export const ANGOLA_DELIVERY_ZONES = {
   periferia: ['Viana', 'Kilamba', 'Zango', 'Cacuaco', 'Funda'],
 } as const;
 
-export const TEST_DELIVERY_PRICE_KZ = 1;
 
 export type AngolaZone = keyof typeof ANGOLA_DELIVERY_ZONES;
 export const ANGOLA_ZONES = Object.keys(ANGOLA_DELIVERY_ZONES) as AngolaZone[];

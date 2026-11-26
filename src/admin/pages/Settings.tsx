@@ -76,7 +76,7 @@ import { ProductTaxonomySettings } from './ProductSettings';
 import { Content } from './Content';
 import { t, type Lang } from '../i18n';
 import { imageOptimizationSummary, imageUploadGuidance, prepareImageUpload } from '../../lib/imageUpload';
-import { ANGOLA_ZONES, DEFAULT_ANGOLA_ZONE_PRICES, TEST_DELIVERY_PRICE_KZ } from '../../storefront/shipping';
+import { ANGOLA_ZONES, DEFAULT_ANGOLA_ZONE_PRICES } from '../../storefront/shipping';
 import { MoneyField } from '../components/MoneyField';
 
 const DEFAULTS: MarketSettings = {
@@ -352,15 +352,6 @@ export function Settings() {
                         />
                       );
                     })}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                      <div>
-                        <strong>{lang === 'pt' ? 'Zona de teste' : 'Test zone'}</strong>
-                        <div style={{ fontSize: 11, color: C.inkSoft }}>
-                          {lang === 'pt' ? 'Apenas para encomendas que contenham exclusivamente a T-shirt de teste.' : 'Only for carts containing the test T-shirt alone.'}
-                        </div>
-                      </div>
-                      <strong style={{ whiteSpace: 'nowrap' }}>{TEST_DELIVERY_PRICE_KZ} Kz</strong>
-                    </div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                       <input type="checkbox" checked={Boolean(settings.angolaFreeShippingEnabled)} onChange={(e) => setSettings((s) => ({ ...s, angolaFreeShippingEnabled: e.target.checked }))} />
                       {t('freeShippingEnabledLabel', lang)}

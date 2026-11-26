@@ -5,6 +5,7 @@ import { useApp } from '../../state/AppContext';
 import { ZygoLink } from '../components/ZygoLink';
 import { useProducts } from '../../hooks/useProducts';
 import {
+  ApiError,
   createOrder,
   createAppyPayOrder,
   cancelAppyPayOrder,
@@ -24,7 +25,7 @@ import { waitForAppyPayResolution } from '../../lib/appyPayStatusPolling';
 import { isAppyPayWidgetConfigured } from '../../config/env';
 import { AppyPayPaymentModal } from '../components/AppyPayPaymentModal';
 import { getMetaOrderContext } from '../../lib/analyticsConsent';
-import { stashPendingOrderEmail } from '../../lib/pendingOrderEmail';
+import { clearPendingOrderEmail, stashPendingOrderEmail } from '../../lib/pendingOrderEmail';
 import { PaypalButton } from '../components/PaypalButton';
 import { localizeCouponError } from '../couponError';
 import { buildManualWhatsappPayload, saveManualWhatsappPayload } from '../../lib/manualWhatsapp';
@@ -33,7 +34,7 @@ import {
   DEFAULT_TAX_RATES,
   ANGOLA_DELIVERY_ZONES,
   ANGOLA_ZONES,
-  TEST_DELIVERY_PRICE_KZ,
+  angolaZoneOf,
   normalizeAngolaShipping,
   normalizePortugalShipping,
   vatIncludedAmount,
@@ -448,7 +449,20 @@ export function Checkout() {
     const controller = new AbortController();
     void waitForAppyPayResolution({
       lookup: async () => {
-        const status = await getAppyPayOrderStatus(appyPayOrder);
+        let status;
+        try {
+          status = await getAppyPayOrderStatus(appyPayOrder);
+        } catch (error) {
+          if (!isSavedOrder || !(error instanceof ApiError) || error.status !== 404) throw error;
+          // The stored checkout can outlive the order it refers to.
+          if (!controller.signal.aborted) {
+            saveAppyPayCheckout(null);
+            clearPendingOrderEmail(appyPayOrder.orderNumber);
+            setAppyPayCheckout(null);
+            setCheckingSavedOrder(false);
+          }
+          return { orderNumber: appyPayOrder.orderNumber, status: 'cancelled', paymentStatus: 'failed' };
+        }
         if (controller.signal.aborted) return status;
         const providerHasRequest = status.appyPayStatus === 'Requested' || status.appyPayStatus === 'Pending';
         const savedRequestSubmitted = isSavedOrder && (!!savedCheckout.authorizationStartedAt || providerHasRequest);
@@ -631,10 +645,7 @@ export function Checkout() {
     })
     .filter((i): i is NonNullable<typeof i> => i !== null);
   const eurSubtotal = eurItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
-  const allowTestDelivery = market === 'AO' && !usesEurSettlement && cart.length > 0 &&
-    cart.every(item => products.some(p => p.id === item.id && p.slug === 't-shirt-de-teste'));
-  const deliveryCity = !allowTestDelivery && market === 'AO' && form.city === 'Zona de teste' ? '' : form.city;
-  const testDelivery = allowTestDelivery && deliveryCity === 'Zona de teste';
+  const deliveryCity = market === 'AO' && !angolaZoneOf(form.city) ? '' : form.city;
 
   const settlementSubtotal = usesEurSettlement ? eurSubtotal : subtotal;
 
@@ -673,8 +684,8 @@ export function Checkout() {
   // shipping line directly rather than folding into discountAmount, so the
   // summary can still show the real shipping price struck through/waived
   // instead of silently vanishing into the merchandise discount number.
-  const freeShipping = !testDelivery && (appliedCoupon?.freeShipping ?? false);
-  const shippingCost = testDelivery ? TEST_DELIVERY_PRICE_KZ : freeShipping
+  const freeShipping = appliedCoupon?.freeShipping ?? false;
+  const shippingCost = freeShipping
     ? 0
     : checkoutShippingCost(market, deliveryMethod, merchandiseTotalAfterDiscount, settings, deliveryCity, totalWeightGrams, form.postalCode);
   const total = merchandiseTotalAfterDiscount + shippingCost;
@@ -1137,7 +1148,6 @@ export function Checkout() {
                 style={{ width: '100%', padding: '11px 12px', fontSize: 13, border: `1px solid ${C.fieldBorder}`, borderRadius: 6, background: C.paper, color: C.ink }}
               >
                 <option value="">{t('selectMunicipality', lang)}</option>
-                {allowTestDelivery && <option value="Zona de teste">{lang === 'en' ? 'Test zone' : 'Zona de teste'} — {formatMoney(TEST_DELIVERY_PRICE_KZ, 'AO', lang)}</option>}
                 {ANGOLA_ZONES.map((zone) => (
                   <optgroup key={zone} label={`${t(`zone${zone[0].toUpperCase()}${zone.slice(1)}`, lang)} — ${formatMoney(angolaShipping.zonePrices[zone], 'AO', lang)}`}>
                     {ANGOLA_DELIVERY_ZONES[zone].map((neighbourhood) => (

@@ -606,6 +606,13 @@ export function Checkout() {
     })
     .filter((i): i is NonNullable<typeof i> => i !== null);
   const eurSubtotal = eurItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+  const allowTestDelivery = market === 'AO' && !usesEurSettlement && cart.length > 0 &&
+    cart.every(item => products.some(p => p.id === item.id && p.slug === 't-shirt-de-teste'));
+  const testDelivery = allowTestDelivery && form.city === 'Zona de teste';
+  useEffect(() => {
+    if (!allowTestDelivery && form.city === 'Zona de teste') setForm(f => ({ ...f, city: '' }));
+  }, [allowTestDelivery, form.city]);
+
   const settlementSubtotal = usesEurSettlement ? eurSubtotal : subtotal;
 
   // Sale-price exclusion (2026-08-04, user rule: a percent-off coupon
@@ -643,8 +650,8 @@ export function Checkout() {
   // shipping line directly rather than folding into discountAmount, so the
   // summary can still show the real shipping price struck through/waived
   // instead of silently vanishing into the merchandise discount number.
-  const freeShipping = appliedCoupon?.freeShipping ?? false;
-  const shippingCost = freeShipping
+  const freeShipping = !testDelivery && (appliedCoupon?.freeShipping ?? false);
+  const shippingCost = testDelivery ? 1 : freeShipping
     ? 0
     : checkoutShippingCost(market, deliveryMethod, merchandiseTotalAfterDiscount, settings, form.city, totalWeightGrams, form.postalCode);
   const total = merchandiseTotalAfterDiscount + shippingCost;
@@ -1067,6 +1074,7 @@ export function Checkout() {
                 style={{ width: '100%', padding: '11px 12px', fontSize: 13, border: `1px solid ${C.fieldBorder}`, borderRadius: 6, background: C.paper, color: C.ink }}
               >
                 <option value="">{t('selectMunicipality', lang)}</option>
+                {allowTestDelivery && <option value="Zona de teste">{lang === 'en' ? 'Test zone' : 'Zona de teste'} — 1 Kz</option>}
                 {ANGOLA_ZONES.map((zone) => (
                   <optgroup key={zone} label={`${t(`zone${zone[0].toUpperCase()}${zone.slice(1)}`, lang)} — ${formatMoney(angolaShipping.zonePrices[zone], 'AO', lang)}`}>
                     {ANGOLA_DELIVERY_ZONES[zone].map((neighbourhood) => (

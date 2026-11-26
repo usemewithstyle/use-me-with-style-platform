@@ -32,8 +32,10 @@ test.describe('Angola checkout: Zygo delivery', () => {
       label: (node as HTMLOptGroupElement).label,
       options: Array.from(node.querySelectorAll('option')).map((option) => option.value),
     })));
-    expect(groups.map((group) => group.options.length)).toEqual([6, 5, 5, 5]);
+    expect(groups.map((group) => group.options.length)).toEqual([7, 6, 5, 5]);
     expect(groups.map((group) => digitsOnly(group.label))).toEqual(['3500', '3500', '3500', '5500']);
+    expect(groups[0].options).toContain('Ilha de Luanda');
+    expect(groups[1].options).toContain('Morro Bento');
     expect(groups[0].options).toContain('Cazenga');
     expect(groups[2].options).toContain('Cassenda');
     expect(groups[3].options).toEqual(['Viana', 'Kilamba', 'Zango', 'Cacuaco', 'Funda']);

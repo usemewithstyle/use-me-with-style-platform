@@ -13,8 +13,8 @@ export type PortugalShippingConfig = {
 // authority); zone prices and the free-delivery threshold come from the market
 // settings. The order's `city` stores the neighbourhood the customer picks.
 export const ANGOLA_DELIVERY_ZONES = {
-  centro: ['Ingombotas', 'Maianga', 'Alvalade', 'Maculusso', 'Mutamba', 'Cazenga'],
-  sul: ['Talatona', 'Patriota', 'Belas', 'Camama', 'Benfica'],
+  centro: ['Ingombotas', 'Maianga', 'Alvalade', 'Maculusso', 'Mutamba', 'Cazenga', 'Ilha de Luanda'],
+  sul: ['Talatona', 'Patriota', 'Belas', 'Camama', 'Benfica', 'Morro Bento'],
   norte: ['Vila Alice', 'Sambizanga', 'Rangel', 'Cassenda', 'Hoji ya Henda'],
   periferia: ['Viana', 'Kilamba', 'Zango', 'Cacuaco', 'Funda'],
 } as const;

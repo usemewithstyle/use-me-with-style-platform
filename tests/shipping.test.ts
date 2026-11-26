@@ -54,8 +54,8 @@ test('Angola Zygo pricing is by zone, editable per zone, and free from Kz 80,000
   assert.equal(checkoutShippingCost('AO', 'courier_ao', 50_000, undefined, undefined), 0); // nothing selected yet
 });
 
-test('the 21 neighbourhoods are split 6/5/5/5 across the four zones', () => {
-  assert.deepEqual(ANGOLA_ZONES.map((zone) => ANGOLA_DELIVERY_ZONES[zone].length), [6, 5, 5, 5]);
+test('the 23 neighbourhoods are split 7/6/5/5 across the four zones', () => {
+  assert.deepEqual(ANGOLA_ZONES.map((zone) => ANGOLA_DELIVERY_ZONES[zone].length), [7, 6, 5, 5]);
   assert.equal(angolaZoneOf('Cacuaco'), 'periferia');
   assert.equal(angolaZoneOf('Luanda'), null);
 });

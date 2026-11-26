@@ -253,12 +253,12 @@ export const T: Record<string, Record<Lang, string>> = {
     en: 'This order weighs approximately {weight} kg. Above 2 kg, tracked delivery is required: {mainland} on the mainland or {islands} in Madeira/Azores.',
   },
   angolaDeliveryTermsNoFree: {
-    pt: 'Entrega em Luanda pela Zygo, em 21 bairros organizados em 4 zonas (o preço depende da zona). A equipa coordena a entrega e envia-lhe por email o número de rastreio da Zygo.',
-    en: 'Delivery in Luanda by Zygo, across 21 neighbourhoods grouped in 4 zones (the price depends on the zone). The team coordinates delivery and emails you the Zygo tracking number.',
+    pt: 'Entrega em Luanda pela Zygo, em 23 bairros organizados em 4 zonas (o preço depende da zona). A equipa coordena a entrega e envia-lhe por email o número de rastreio da Zygo.',
+    en: 'Delivery in Luanda by Zygo, across 23 neighbourhoods grouped in 4 zones (the price depends on the zone). The team coordinates delivery and emails you the Zygo tracking number.',
   },
   angolaDeliveryTerms: {
-    pt: 'Entrega em Luanda pela Zygo, em 21 bairros organizados em 4 zonas (o preço depende da zona). Entrega grátis em encomendas de {amount} ou mais. A equipa coordena a entrega e envia-lhe por email o número de rastreio da Zygo.',
-    en: 'Delivery in Luanda by Zygo, across 21 neighbourhoods grouped in 4 zones (the price depends on the zone). Free delivery on orders of {amount} or more. The team coordinates delivery and emails you the Zygo tracking number.',
+    pt: 'Entrega em Luanda pela Zygo, em 23 bairros organizados em 4 zonas (o preço depende da zona). Entrega grátis em encomendas de {amount} ou mais. A equipa coordena a entrega e envia-lhe por email o número de rastreio da Zygo.',
+    en: 'Delivery in Luanda by Zygo, across 23 neighbourhoods grouped in 4 zones (the price depends on the zone). Free delivery on orders of {amount} or more. The team coordinates delivery and emails you the Zygo tracking number.',
   },
   countryLockedPT: { pt: 'As tarifas CTT desta loja aplicam-se apenas a moradas em Portugal.', en: 'This store’s CTT rates apply only to addresses in Portugal.' },
   cttTrackingHeading: { pt: 'Rastreio CTT', en: 'CTT tracking' },

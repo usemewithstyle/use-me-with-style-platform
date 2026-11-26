@@ -54,3 +54,43 @@ test('only products in stock for this market fill the look, ordered by pairing a
   await expect(recommendations.nth(2)).toHaveAttribute('href', '/produto/solo-dress');
 
 });
+
+test('a large accessories category leaves room for other pieces and varies its picks by product', async ({ page }) => {
+  const products = [
+    product(100, 'court-dress', 'vestidos'),
+    product(101, 'training-top', 'tops'),
+    product(102, 'training-set', 'conjuntos'),
+    product(103, 'weekend-set', 'conjuntos'),
+    ...Array.from({ length: 8 }, (_, index) => product(200 + index, `accessory-${index}`, 'acessorios')),
+  ];
+  await page.addInitScript(() => {
+    localStorage.setItem('ump-market-pref', 'AO');
+    localStorage.setItem('ump-lang-pref', 'en');
+  });
+  await page.route('**/api/**', route => route.fulfill({ json: { docs: [] } }));
+  await page.route('**/api/products**', route => route.fulfill({ json: { docs: products } }));
+
+  const links = page.getByRole('region', { name: 'Complete the look' }).getByRole('link');
+  const picks = async () => {
+    await expect(links).toHaveCount(4);
+    return links.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
+  };
+
+  await page.goto('/produto/court-dress');
+  const dressPicks = await picks();
+  expect(dressPicks.filter(href => href?.includes('/accessory-'))).toHaveLength(2);
+  await page.reload();
+  expect(await picks()).toEqual(dressPicks);
+
+  await page.goto('/produto/training-top');
+  const topPicks = await picks();
+  expect(topPicks.filter(href => href?.includes('/accessory-'))).toHaveLength(2);
+  expect(topPicks.slice(0, 2)).not.toEqual(dressPicks.slice(0, 2));
+  expect(topPicks.slice(2)).toEqual(expect.arrayContaining(['/produto/training-set', '/produto/weekend-set']));
+
+  await page.route('**/api/products**', route => route.fulfill({
+    json: { docs: products.filter(({ category }) => ['vestidos', 'acessorios'].includes(category.slug)) },
+  }));
+  await page.goto('/produto/court-dress');
+  expect((await picks()).every(href => href?.includes('/accessory-'))).toBe(true);
+});
